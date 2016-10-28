@@ -31,9 +31,20 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="main.c">
+		<Unit filename="interface_app.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="ip_app.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="log.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="log.h" />
+		<Unit filename="readline.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="readline.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
