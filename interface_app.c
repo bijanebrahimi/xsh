@@ -4,26 +4,43 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "log.h"
+#include "completion.h"
 #include "readline.h"
 
-#define PROMPT "\e[0m\e[93m(config-if)\e[0m "
+#define PROMPT "(config-if) "
 
-void   callback(const char *cmd);
+
+void   callback(const char*);
 char **completion(const char*, int ,int);
-char  *my_generator(const char* text, int state);
-char  *dupstr(char* s);
-void  *xmalloc(int size);
+char  *completion_entry(const char*, int);
+char  *my_generator(const char*, int);
+char  *dupstr(char*);
+void  *xmalloc(int);
 
 char  *cmd[] = {"ifconfig", "shutdown", "no shutdown" ,"word", "exit"};
+struct comphead comp_head = TAILQ_HEAD_INITIALIZER(comp_head);
 
 
 int
 main(int argc, const char **argv)
 {
+  struct compnode *node_ip, *node_shutdown, *node_exit;
+
   /* Ignore user's interruption signal */
   signal(SIGINT, SIG_IGN);
 
-  readline_init(PROMPT, callback, completion);
+  /* Register word completions */
+  comp_init(&comp_head);
+  node_ip = comp_insert("ip", "IP command", &comp_head);
+  comp_insert("address", "Set IP address", &node_ip->childs);
+  comp_insert("forward", "Set forward IP", &node_ip->childs);
+  comp_insert("default-gateway", "Set default gateway", &node_ip->childs);
+  node_shutdown = comp_insert("shutdown", "Shutdown Interface", &comp_head);
+  node_exit = comp_insert("exit", "Exit the node", &comp_head);
+
+  /* Initialize readline */
+  readline_init(PROMPT, callback, completion, completion_entry);
+
   return 0;
 }
 
@@ -39,24 +56,35 @@ callback(const char *cmd)
   char output[1035], command[256];
 
   /* Open the command for reading. */
-  add_history(cmd);
   sprintf(command, "%s", cmd);
   printf("running %s %d\n", command, strlen(command));
-  fp = popen(command, "r");
-  if (fp == NULL) {
-    printf("Failed to run command\n" );
-    exit(1);
+}
+
+char*
+completion_entry(const char *text, int state)
+{
+  char *comp_text;
+  static struct compnode *node;
+
+  if (state==0) {
+    if (TAILQ_EMPTY(&comp_head))
+      return NULL;
+
+    node = TAILQ_FIRST(&comp_head);
+    if (strncasecmp(rl_line_buffer, "ip ", 3)==0)
+      node = TAILQ_FIRST(&node->childs);
   }
 
-  /* Read the output a line at a time - output it. */
-  while (fgets(output, sizeof(output)-1, fp) != NULL) {
-    printf("%s", output);
+  while (node) {
+    if (strncasecmp(text, node->name, strlen(text))==0) {
+      comp_text = strdup(node->name);
+      node = TAILQ_NEXT(node, next);
+      return comp_text;
+    }
+    node = TAILQ_NEXT(node, next);
   }
-  printf("\n");
 
-  /* close */
-  free(cmd);
-  pclose(fp);
+  return NULL;
 }
 
 char**
@@ -65,7 +93,7 @@ completion(const char *text, int start, int end)
   char **matches;
 
   matches = (char **)NULL;
-  //printf("[%s %d:%d]\n", text, start, end);
+  //printf("[%s %s %d:%d]\n", rl_line_buffer, text, start, end);
   //if (start == 0) {
     matches = rl_completion_matches(text, &my_generator);
   //} else {
@@ -80,8 +108,8 @@ my_generator(const char* text, int state)
 {
   static int list_index, len;
   char *name;
-  //printf("[%s %d]\n", text, state);
-  //return (char*)NULL;
+  printf("[%s %d]\n", text, state);
+  return (char*)NULL;
 
   if (!state) {
     list_index = 0;
@@ -104,7 +132,7 @@ dupstr(char* s)
 {
   char *r;
 
-  r = (char*)xmalloc((strlen(s) + 1));
+  r = (char*)malloc((strlen(s) + 1));
   strcpy(r, s);
   return r;
 }

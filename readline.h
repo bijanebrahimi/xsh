@@ -3,7 +3,7 @@
 
 typedef void (*readline_callback_t)(const char*);
 typedef char (**my_completion)(const char*, int ,int);
-extern int readline_init(const char *prompt, void (*callback)(const char*),
+extern int readline_init(const char*, void (*)(const char*),
                          char **my_completion(const char*, int ,int));
 
 #endif // _READLINE_H_

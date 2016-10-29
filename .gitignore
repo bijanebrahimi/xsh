@@ -4,6 +4,9 @@
 *.obj
 *.elf
 
+# Dependency files
+*.d
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -27,7 +30,9 @@
 *.i*86
 *.x86_64
 *.hex
+interface
 
 # Debug files
 *.dSYM/
 *.su
+.gdb*

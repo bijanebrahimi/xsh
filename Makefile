@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -w -lm -lreadline
+CFLAGS=-Wall -w -lm -lreadline -g
 
 #TARGETS=$(shell ls *_app.c | sed 's/\.c//')
 SRCS=$(wildcard *.c)
