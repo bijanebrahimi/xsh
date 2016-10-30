@@ -2,14 +2,6 @@
 #include <sys/queue.h>
 #include "completion.h"
 
-int
-comp_init(struct comphead *comp_head)
-{
-  TAILQ_INIT(comp_head);
-  return 0;
-}
-
-
 struct compnode *
 comp_insert(const char *name, const char *description, struct comphead *head)
 {

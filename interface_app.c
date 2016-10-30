@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/queue.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "log.h"
@@ -22,10 +23,10 @@ main(int argc, const char **argv)
   struct compnode *node, *node_tmp;
 
   /* Ignore user's interruption signal */
+  TAILQ_INIT(&comp_head);
   signal(SIGINT, SIG_IGN);
 
   /* Register word completions */
-  comp_init(&comp_head);
   node = comp_insert("ip", "IP command", &comp_head);
   comp_insert("address", "Set IP address", &node->childs);
   comp_insert("forward", "Set forward IP", &node->childs);
