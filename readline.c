@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <sys/queue.h>
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -6,8 +7,8 @@
 
 
 int
-readline_init(const char *prompt, void (*callback)(const char*),
-              char *completion(const char*,int ,int))
+rln_init(const char *prompt, void (*callback)(const char*),
+              char (*completion)(const char*,int ,int))
 {
   char *buf;
 
@@ -36,4 +37,40 @@ readline_init(const char *prompt, void (*callback)(const char*),
   free(buf);
 
   return 0;
+}
+
+struct compnode *
+rln_completion_insert(const char *name, const char *description, struct comphead *head)
+{
+  struct compnode *node;
+  node = malloc(sizeof(struct compnode));
+  snprintf(node->name, sizeof(node->name), name);
+  snprintf(node->description, sizeof(node->description), description);
+  TAILQ_INIT(&node->childs);
+
+  if (TAILQ_EMPTY(head))
+    TAILQ_INSERT_HEAD(head, node, next);
+  else
+    TAILQ_INSERT_TAIL(head, node, next);
+
+  return node;
+}
+
+struct compnode *
+rln_completion_find_name(const char *name, struct comphead *head)
+{
+  struct compnode *node, *found_node=NULL;
+  if (TAILQ_EMPTY(head))
+    return NULL;
+
+  node = TAILQ_FIRST(head);
+  TAILQ_FOREACH(node, head, next) {
+    if (strncasecmp(name, node->name, strlen(name))==0) {
+      if (!found_node)
+        found_node = node;
+      else
+        return NULL;
+    }
+  }
+  return found_node;
 }

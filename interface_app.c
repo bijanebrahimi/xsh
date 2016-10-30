@@ -5,11 +5,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "log.h"
-#include "completion.h"
 #include "readline.h"
+
 #define PROMPT "(config-if) "
-
-
 void   callback(const char*);
 char  *completion_entry(const char*, int);
 char **completion(const char*, int, int);
@@ -27,18 +25,18 @@ main(int argc, const char **argv)
   signal(SIGINT, SIG_IGN);
 
   /* Register word completions */
-  node = comp_insert("ip", "IP command", &comp_head);
-  comp_insert("address", "Set IP address", &node->childs);
-  comp_insert("forward", "Set forward IP", &node->childs);
-  comp_insert("default-gateway", "Set default gateway", &node->childs);
-  node_tmp = comp_insert("dhcp", "Set default gateway", &node->childs);
-  comp_insert("server", "Set DHCP server", &node_tmp->childs);
+  node = rln_completion_insert("ip", "IP command", &comp_head);
+  rln_completion_insert("address", "Set IP address", &node->childs);
+  rln_completion_insert("forward", "Set forward IP", &node->childs);
+  rln_completion_insert("default-gateway", "Set default gateway", &node->childs);
+  node_tmp = rln_completion_insert("dhcp", "Set default gateway", &node->childs);
+  rln_completion_insert("server", "Set DHCP server", &node_tmp->childs);
 
-  node = comp_insert("shutdown", "Shutdown Interface", &comp_head);
-  node = comp_insert("exit", "Exit the node", &comp_head);
+  node = rln_completion_insert("shutdown", "Shutdown Interface", &comp_head);
+  node = rln_completion_insert("exit", "Exit the node", &comp_head);
 
   /* Initialize readline */
-  readline_init(PROMPT, callback, completion);
+  rln_init(PROMPT, callback, completion);
 
   return 0;
 }
@@ -69,7 +67,7 @@ completion(const char *text, int start, int end)
     if (comp_token[0]=='\0')
       continue;
 
-    node = comp_find_name(comp_token, head);
+    node = rln_completion_find_name(comp_token, head);
     if (node)
       head = &node->childs;
     else
