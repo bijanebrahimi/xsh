@@ -7,14 +7,12 @@
 
 int
 readline_init(const char *prompt, void (*callback)(const char*),
-              char **completion(const char*, int, int),
-              char *completion_entry(const char*, int))
+              char *completion(const char*,int ,int))
 {
   char *buf;
 
   /* gnu readline initialization */
-  //rl_attempted_completion_function = completion;
-  rl_completion_entry_function = completion_entry;
+  rl_attempted_completion_function = completion;
 
   /* maximum number to show without confirms */
   rl_completion_query_items = 80;
@@ -24,6 +22,10 @@ readline_init(const char *prompt, void (*callback)(const char*),
 
   while ((buf = readline(prompt))!=NULL) {
     rl_bind_key('\t', rl_complete);
+
+    /* Ignoring empty commands */
+    if (buf[0]==0)
+      continue;
 
     /* Ignore adding commands to history if spaced */
     if (buf[0]!=' ')

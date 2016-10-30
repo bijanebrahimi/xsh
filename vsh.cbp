@@ -31,19 +31,24 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="completion.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="completion.d" />
+		<Unit filename="completion.h" />
 		<Unit filename="interface_app.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="ip_app.c">
-			<Option compilerVar="CC" />
-		</Unit>
+		<Unit filename="interface_app.d" />
 		<Unit filename="log.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="log.d" />
 		<Unit filename="log.h" />
 		<Unit filename="readline.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="readline.d" />
 		<Unit filename="readline.h" />
 		<Extensions>
 			<code_completion />

@@ -19,5 +19,5 @@ typedef struct compnode {
 
 extern int                  comp_init(struct comphead*);
 extern struct compnode     *comp_insert(const char*, const char*, struct comphead*);
-
+extern struct compnode     *comp_find_name(const char*, struct comphead*);
 #endif // _COMPLETION_H_

@@ -26,3 +26,22 @@ comp_insert(const char *name, const char *description, struct comphead *head)
 
   return node;
 }
+
+struct compnode *
+comp_find_name(const char *name, struct comphead *head)
+{
+  struct compnode *node, *found_node=NULL;
+  if (TAILQ_EMPTY(head))
+    return NULL;
+
+  node = TAILQ_FIRST(head);
+  TAILQ_FOREACH(node, head, next) {
+    if (strncasecmp(name, node->name, strlen(name))==0) {
+      if (!found_node)
+        found_node = node;
+      else
+        return NULL;
+    }
+  }
+  return found_node;
+}
