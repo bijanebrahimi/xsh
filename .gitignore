@@ -36,3 +36,4 @@ interface
 *.dSYM/
 *.su
 .gdb*
+*.depend
