@@ -11,6 +11,7 @@
 void   callback(const char*);
 char  *completion_entry(const char*, int);
 char **completion(const char*, int, int);
+int    help(int, int);
 
 struct comphead comp_head = TAILQ_HEAD_INITIALIZER(comp_head);
 struct comphead *comp_curr;
@@ -44,7 +45,7 @@ main(int argc, const char **argv)
   rln_completion("exit", &comp_head);
 
   /* Initialize readline */
-  rln_init(PROMPT, callback, completion);
+  rln_init(PROMPT, callback, completion, help);
 
   return 0;
 }
@@ -66,8 +67,6 @@ completion(const char *text, int start, int end)
   struct compnode *node;
   struct comphead *head;
   char **matches, *comp_text, *comp_text_ptr, *comp_token;
-  // printf("[%s][%s][%d:%d]", rl_line_buffer, text, start, end);
-  //rl_expand_prompt("(config-if TAB) ");
 
   head = &comp_head;
   matches = (char **)NULL;
@@ -94,6 +93,42 @@ completion(const char *text, int start, int end)
   return (matches);
 }
 
+int
+help(int _unused, int __unused)
+{
+  int start;
+  struct compnode *node;
+  struct comphead *head;
+  char **matches, *comp_text, *comp_text_ptr, *comp_token;
+
+
+  head = &comp_head;
+  matches = (char **)NULL;
+  comp_text_ptr = comp_text = strndup(rl_line_buffer, rl_point);
+  while ((comp_token=strsep(&comp_text, " "))!=NULL) {
+    /* Skip the seperator itself */
+    if (comp_token[0]=='\0')
+      continue;
+
+    node = rln_completion_find_name(comp_token, head);
+    if (node) {
+      head = &node->head;
+    } else {
+      return (matches);
+    }
+  }
+
+  if (!TAILQ_EMPTY(head)) {
+    printf("\n");
+    TAILQ_FOREACH(node, head, next) {
+      printf("%s\n", node->syntax);
+    }
+    rl_forced_update_display();
+  }
+
+  free(comp_text_ptr);
+  return 0;
+}
 
 char*
 completion_entry(const char *text, int state)

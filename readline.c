@@ -20,7 +20,8 @@ rln_help_inline(int a, int b)
 
 int
 rln_init(const char *prompt, void (*callback)(const char*),
-              char (*completion)(const char*,int ,int))
+         char (*completion)(const char*,int ,int),
+         int (*help)(int ,int))
 {
   char *buf;
 
@@ -36,7 +37,7 @@ rln_init(const char *prompt, void (*callback)(const char*),
   rl_basic_word_break_characters = READLINE_BREAK_CHARS;
 
   rl_bind_key ('\t', rl_insert);
-  rl_bind_key('?', rln_help_inline);
+  rl_bind_key('?', help);
   rl_bind_key('\t', rl_complete);
   while ((buf = readline(prompt))!=NULL) {
 
@@ -116,9 +117,9 @@ rln_completion(const char *cmd, struct comphead *head)
       continue;
 
     node = malloc(sizeof(struct compnode));
+    TAILQ_INIT(&node->head);
+
     sprintf(node->syntax, token);
-
-
     switch (token[0]) {
     case '<':
       /* Variable argument */
@@ -126,6 +127,10 @@ rln_completion(const char *cmd, struct comphead *head)
       break;
     case '[':
       /* Optional argument */
+      TAILQ_INSERT_TAIL(head, node, next);
+
+      node = malloc(sizeof(struct compnode));
+      sprintf(node->syntax, token);
       snprintf(node->text, strlen(token)-1, token+1);
       break;
     default:
@@ -134,7 +139,6 @@ rln_completion(const char *cmd, struct comphead *head)
       break;
     }
 
-    TAILQ_INIT(&node->head);
     TAILQ_INSERT_TAIL(head, node, next);
     head = &node->head;
   }
