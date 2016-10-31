@@ -25,7 +25,6 @@ struct compnode {
 
 extern int                rln_init(const char*,
                                    void (*)(const char*),
-                                   char (*)(const char*, int ,int),
                                    struct comphead*);
 extern struct compnode   *rln_completion_find_name(const char*, struct comphead*);
 extern struct compnode   *rln_completion_find_syntax(const char*, struct comphead*);

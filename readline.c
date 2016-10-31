@@ -6,9 +6,12 @@
 #include <readline/history.h>
 #include "readline.h"
 
-struct comphead *rln_completion_head = NULL;
+struct comphead *rln_completion_head = NULL,
+                *rln_completion_head_curr = NULL;
 
-int rln_completion_help(int, int);
+int    rln_completion_help(int, int);
+char  *completion_entry(const char*, int);
+char **completion(const char*, int, int);
 
 
 int
@@ -25,7 +28,6 @@ rln_help_inline(int a, int b)
 
 int
 rln_init(const char *prompt, void (*callback)(const char*),
-         char (*completion)(const char*,int ,int),
          struct comphead* completion_head)
 {
   char *buf;
@@ -188,4 +190,58 @@ rln_completion_help(int _unused, int __unused)
 
   free(comp_text_ptr);
   return 0;
+}
+
+char**
+completion(const char *text, int start, int end)
+{
+  struct compnode *node;
+  struct comphead *head;
+  char **matches, *comp_text, *comp_text_ptr, *comp_token;
+
+  head = rln_completion_head;
+  matches = (char **)NULL;
+  comp_text_ptr = comp_text = strndup(rl_line_buffer, start);
+  while ((comp_token=strsep(&comp_text, " "))!=NULL) {
+    /* Skip the seperator itself */
+    if (comp_token[0]=='\0')
+      continue;
+
+    node = rln_completion_find_name(comp_token, head);
+    if (node) {
+      head = &node->head;
+    } else {
+      return (matches);
+    }
+  }
+
+  if (!TAILQ_EMPTY(head)) {
+    rln_completion_head_curr = head;
+    matches = rl_completion_matches(text, &completion_entry);
+  }
+
+  free(comp_text_ptr);
+  return (matches);
+}
+
+char*
+completion_entry(const char *text, int state)
+{
+  char *comp_text, *line_buffer;
+  static struct compnode *node;
+
+  if (state==0) {
+    node = TAILQ_FIRST(rln_completion_head_curr);
+  }
+
+  while (node) {
+    if (strncasecmp(text, node->text, strlen(text))==0) {
+      comp_text = strdup(node->text);
+      node = TAILQ_NEXT(node, next);
+      return comp_text;
+    }
+    node = TAILQ_NEXT(node, next);
+  }
+
+  return NULL;
 }

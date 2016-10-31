@@ -9,19 +9,14 @@
 
 #define PROMPT "(config-if) "
 void   callback(const char*);
-char  *completion_entry(const char*, int);
-char **completion(const char*, int, int);
 
 struct comphead comp_head = TAILQ_HEAD_INITIALIZER(comp_head);
-struct comphead *comp_curr;
 
 int
 main(int argc, const char **argv)
 {
   struct compnode *node, *node_tmp;
 
-  /* Ignore user's interruption signal */
-  TAILQ_INIT(&comp_head);
   /* TODO: ignore user's C^Z C^D */
   signal(SIGINT, SIG_IGN);
 
@@ -44,7 +39,7 @@ main(int argc, const char **argv)
   rln_completion("exit", &comp_head);
 
   /* Initialize readline */
-  rln_init(PROMPT, callback, completion, &comp_head);
+  rln_init(PROMPT, callback, &comp_head);
 
   return 0;
 }
@@ -57,59 +52,5 @@ callback(const char *cmd)
 
   /* Open the command for reading. */
   // rl_message("running %s %d\n", cmd, strlen(cmd));
-  rl_message("\n");
-}
-
-char**
-completion(const char *text, int start, int end)
-{
-  struct compnode *node;
-  struct comphead *head;
-  char **matches, *comp_text, *comp_text_ptr, *comp_token;
-
-  head = &comp_head;
-  matches = (char **)NULL;
-  comp_text_ptr = comp_text = strndup(rl_line_buffer, start);
-  while ((comp_token=strsep(&comp_text, " "))!=NULL) {
-    /* Skip the seperator itself */
-    if (comp_token[0]=='\0')
-      continue;
-
-    node = rln_completion_find_name(comp_token, head);
-    if (node) {
-      head = &node->head;
-    } else {
-      return (matches);
-    }
-  }
-
-  if (!TAILQ_EMPTY(head)) {
-    comp_curr = head;
-    matches = rl_completion_matches(text, &completion_entry);
-  }
-
-  free(comp_text_ptr);
-  return (matches);
-}
-
-char*
-completion_entry(const char *text, int state)
-{
-  char *comp_text, *line_buffer;
-  static struct compnode *node;
-
-  if (state==0) {
-    node = TAILQ_FIRST(comp_curr);
-  }
-
-  while (node) {
-    if (strncasecmp(text, node->text, strlen(text))==0) {
-      comp_text = strdup(node->text);
-      node = TAILQ_NEXT(node, next);
-      return comp_text;
-    }
-    node = TAILQ_NEXT(node, next);
-  }
-
-  return NULL;
+  //rl_message("\n");
 }
