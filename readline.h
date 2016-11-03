@@ -8,26 +8,33 @@
 #define READLINE_BREAK_CHARS " /"
 
 
-TAILQ_HEAD(comphead, compnode);
+typedef enum {COMPLTYPE_STATIC, COMPLTYPE_VARIABLE} compltype_t;
+typedef enum {false, true} boolean_t;
+typedef enum {COMPLFMT_IP, COMPLFMT_NETMASK, COMPLFMT_NETWORK,
+              COMPLFMT_NUBER, COMPLFMT_TEXT, COMPLFMT_NONE} complfmt_t;
 
-struct compnode {
+TAILQ_HEAD(complhead, complnode);
+typedef struct complnode {
   /* The syntaxt: <variable>,[optional] */
-  char syntax[32];
-  char text[32];
-  int  optional;
+  char command[32];     /* apears in command */
+  int  type;            /* static/variable */
+  int  optional;        /* mandtory/optional */
+  int  format;   /* ip/network/netmask/number/... */
+  char* (*generator)(const char*, int); /* completion generator function */
+  int (*validator)(const char*);        /* validator function */
+  char hint[16];    /* short help text */
+  char description[64]; /* long help text */
 
-  char description[64];
-
-  TAILQ_ENTRY(compnode) next;
-  struct comphead head;
-};
+  TAILQ_ENTRY(complnode) next;
+  struct complhead head;
+} complnode_t;
 
 
-extern int                rln_init(const char*,
-                                   void (*)(const char*),
-                                   struct comphead*);
-extern struct compnode   *rln_completion_find_name(const char*, struct comphead*);
-extern struct compnode   *rln_completion_find_syntax(const char*, struct comphead*);
-extern int                rln_completion(const char*, struct comphead*);
+extern int                 rln_init(const char*,
+                                    void (*)(const char*),
+                                    struct complhead*);
+extern struct complnode   *rln_completion_find_cmd(const char*, struct complhead*);
+extern struct complnode   *rln_completion_find_syntax(const char*, struct complhead*);
+extern int                 rln_completion_add(const struct complnode[], struct complhead*);
 
 #endif // _COMPLETION_H_

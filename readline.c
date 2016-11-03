@@ -6,8 +6,8 @@
 #include <readline/history.h>
 #include "readline.h"
 
-struct comphead *rln_completion_head = NULL,
-                *rln_completion_head_curr = NULL;
+struct complhead *rln_coml_head = NULL,
+                 *rln_compl_ptr = NULL;
 
 int    rln_completion_help(int, int);
 char  *completion_entry(const char*, int);
@@ -15,38 +15,25 @@ char **completion(const char*, int, int);
 
 
 int
-rln_help_inline(int a, int b)
-{
-  printf("\n[%s][%d %d]\n", rl_line_buffer, rl_point, rl_end);
-  rl_forced_update_display();
-
-  //rl_done = 1;
-  //rl_on_new_line();
-
-  //rl_message("what?\n");
-}
-
-int
 rln_init(const char *prompt, void (*callback)(const char*),
-         struct comphead* completion_head)
+         struct complhead* head)
 {
-  char *buf;
-  rln_completion_head = completion_head;
+  rln_coml_head = head;
 
   /* gnu readline initialization */
   rl_attempted_completion_function = completion;
-  //rl_completion_entry_function = NULL;
 
   /* maximum number to show without confirms */
-  rl_completion_query_items = 80;
+  rl_completion_query_items = 15;
 
-  /* default break word characters */
-  //rl_basic_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
+  /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
   rl_basic_word_break_characters = READLINE_BREAK_CHARS;
 
-  rl_bind_key ('\t', rl_insert);
+  /* bind trigger keys */
   rl_bind_key('?', rln_completion_help);
   rl_bind_key('\t', rl_complete);
+
+  char *buf;
   while ((buf = readline(prompt))!=NULL) {
 
     /* Ignoring empty commands */
@@ -64,115 +51,110 @@ rln_init(const char *prompt, void (*callback)(const char*),
   return 0;
 }
 
-struct compnode *
-rln_completion_find_name(const char *name, struct comphead *head)
+struct complnode *
+rln_completion_find_command(const char *text, struct complhead *head)
 {
-  struct compnode *node, *found_node=NULL;
+  struct complnode *node, *node_return=NULL;
   if (TAILQ_EMPTY(head))
     return NULL;
 
   node = TAILQ_FIRST(head);
   TAILQ_FOREACH(node, head, next) {
-    if (strncasecmp(name, node->text, strlen(name))==0) {
-      if (!found_node)
-        found_node = node;
+    if (!strncasecmp(text, node->command, strlen(text))) {
+      if (!node_return)
+        node_return = node;
       else
         return NULL;
     }
   }
-  return found_node;
+  return node_return;
 }
 
-struct compnode *
-rln_completion_find_syntax(const char *syntax, struct comphead *head)
+struct complnode *
+rln_completion_find(const char *text, struct complhead *head)
 {
-  struct compnode *node, *found_node=NULL;
+  struct complnode *node, *node_return=NULL;
   if (TAILQ_EMPTY(head))
     return NULL;
 
   node = TAILQ_FIRST(head);
   TAILQ_FOREACH(node, head, next) {
-    if (strncasecmp(syntax, node->syntax, strlen(syntax))==0) {
-      if (!found_node)
-        found_node = node;
-      else
-        return NULL;
+    switch (node->type) {
+    case COMPLTYPE_STATIC:
+      if (!strncasecmp(text, node->command, strlen(text))) {
+        if (!node_return)
+          node_return = node;
+        else
+          return NULL;
+      }
+      break;
+    case COMPLTYPE_VARIABLE:
+      if (node->validator && node->validator(text)) {
+        if (!node_return)
+          node_return = node;
+        else
+          return NULL;
+      }
+      break;
     }
   }
-  return found_node;
+  return node_return;
 }
 
 int
-rln_completion(const char *cmd, struct comphead *head)
+rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
 {
-  struct compnode *node;
-  struct comphead *head_ptr;
-  char *comp_text, *token, *comp_text_ptr;
+  int i;
+  const struct complnode *node;
+  struct complnode *new_node;
+  struct complhead *head_ptr;
 
   head_ptr = head;
-  comp_text_ptr = comp_text = strdup(cmd);
+  for (i=0; ; i++) {
+    node = (const struct complnode *)&compl_nodes[i];
+    if (*node->command==NULL)
+      break;
 
-  while ((token=strsep(&comp_text, READLINE_BREAK_CHARS))!=NULL) {
-    /* Node already exists, move on */
-    node = rln_completion_find_name(token, head);
-    if (node) {
-      head = &node->head;
+    if ((new_node = rln_completion_find_command(node->command, head_ptr))!=NULL) {
+      head_ptr = &new_node->head;
       continue;
     }
 
-    /* Skip the seperator itself */
-    if (strlen(token)==1)
-      continue;
+    /* new complnode */
+    new_node = malloc(sizeof(struct complnode));
+    TAILQ_INIT(&new_node->head);
+    snprintf(new_node->command, 32, node->command);
+    snprintf(new_node->hint, 16, node->hint);
+    snprintf(new_node->description, 64, node->description);
+    new_node->type = node->type;
+    new_node->optional = node->optional;
+    new_node->format = node->format;
+    new_node->generator = node->generator;
+    new_node->validator = node->validator;
+    TAILQ_INSERT_TAIL(head_ptr, new_node, next);
 
-    node = malloc(sizeof(struct compnode));
-    TAILQ_INIT(&node->head);
-
-    sprintf(node->syntax, token);
-    switch (token[0]) {
-    case '<':
-      /* Variable argument */
-      sprintf(node->text, token);
-      break;
-    case '[':
-      /* Optional argument */
-      TAILQ_INSERT_TAIL(head, node, next);
-
-      node = malloc(sizeof(struct compnode));
-      sprintf(node->syntax, token);
-      snprintf(node->text, strlen(token)-1, token+1);
-      break;
-    default:
-      /* Static argument */
-      sprintf(node->text, token);
-      break;
-    }
-
-    TAILQ_INSERT_TAIL(head, node, next);
-    head = &node->head;
+    head_ptr = &new_node->head;
   }
-
-  free(comp_text_ptr);
   return 0;
 }
 
 int
 rln_completion_help(int _unused, int __unused)
 {
-  int start;
-  struct compnode *node;
-  struct comphead *head;
-  char **matches, *comp_text, *comp_text_ptr, *comp_token;
+  struct complnode *node;
+  struct complhead *head;
+  char **matches, *buff, *buff_ptr, *token;
 
 
-  head = rln_completion_head;
+  head = rln_coml_head;
   matches = (char **)NULL;
-  comp_text_ptr = comp_text = strndup(rl_line_buffer, rl_point);
-  while ((comp_token=strsep(&comp_text, " "))!=NULL) {
+  buff_ptr = buff = strndup(rl_line_buffer, rl_point);
+  while ((token=strsep(&buff, " "))!=NULL) {
     /* Skip the seperator itself */
-    if (comp_token[0]=='\0')
+    if (token[0]=='\0')
       continue;
 
-    node = rln_completion_find_name(comp_token, head);
+    node = rln_completion_find(token, head);
     if (node) {
       head = &node->head;
     } else {
@@ -180,34 +162,41 @@ rln_completion_help(int _unused, int __unused)
     }
   }
 
+
   if (!TAILQ_EMPTY(head)) {
+    int max = 0;
+    TAILQ_FOREACH(node, head, next)
+      if (strlen(node->hint)>max)
+        max = strlen(node->hint);
+
+    max += 3;
     printf("\n");
     TAILQ_FOREACH(node, head, next) {
-      printf("%s\n", node->syntax);
+      printf("%-*s %s\n", max, node->hint, node->description);
     }
     rl_forced_update_display();
   }
 
-  free(comp_text_ptr);
+  free(buff_ptr);
   return 0;
 }
 
 char**
 completion(const char *text, int start, int end)
 {
-  struct compnode *node;
-  struct comphead *head;
-  char **matches, *comp_text, *comp_text_ptr, *comp_token;
+  struct complnode *node;
+  struct complhead *head;
+  char **matches, *buff, *buff_ptr, *token;
 
-  head = rln_completion_head;
+  head = rln_coml_head;
   matches = (char **)NULL;
-  comp_text_ptr = comp_text = strndup(rl_line_buffer, start);
-  while ((comp_token=strsep(&comp_text, " "))!=NULL) {
+  buff_ptr = buff = strndup(rl_line_buffer, start);
+  while ((token=strsep(&buff, " "))!=NULL) {
     /* Skip the seperator itself */
-    if (comp_token[0]=='\0')
+    if (token[0]=='\0')
       continue;
 
-    node = rln_completion_find_name(comp_token, head);
+    node = rln_completion_find(token, head);
     if (node) {
       head = &node->head;
     } else {
@@ -216,30 +205,39 @@ completion(const char *text, int start, int end)
   }
 
   if (!TAILQ_EMPTY(head)) {
-    rln_completion_head_curr = head;
+    rln_compl_ptr = head;
     matches = rl_completion_matches(text, &completion_entry);
   }
 
-  free(comp_text_ptr);
+  free(buff_ptr);
   return (matches);
 }
 
 char*
 completion_entry(const char *text, int state)
 {
-  char *comp_text, *line_buffer;
-  static struct compnode *node;
+  char *buff;
+  static struct complnode *node;
 
   if (state==0) {
-    node = TAILQ_FIRST(rln_completion_head_curr);
+    node = TAILQ_FIRST(rln_compl_ptr);
   }
 
   while (node) {
-    if (strncasecmp(text, node->text, strlen(text))==0) {
-      comp_text = strdup(node->text);
-      node = TAILQ_NEXT(node, next);
-      return comp_text;
+    switch (node->type) {
+    case COMPLTYPE_STATIC:
+      if (strncasecmp(text, node->command, strlen(text))==0) {
+        buff = strdup(node->command);
+        node = TAILQ_NEXT(node, next);
+        return buff;
+      }
+      break;
+    case COMPLTYPE_VARIABLE:
+      /* TODO: add support */
+    default:
+      break;
     }
+
     node = TAILQ_NEXT(node, next);
   }
 
