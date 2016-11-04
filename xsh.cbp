@@ -16,7 +16,7 @@
 		</MakeCommands>
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/xsh" prefix_auto="1" extension_auto="1" />
+				<Option output="interface" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -57,7 +57,20 @@
 			<Add option="-Wall" />
 			<Add option="-lreadline" />
 		</Compiler>
+		<Unit filename="argp_app.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="interface_app.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ip_app.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ip_completion.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ip_completion.h" />
+		<Unit filename="libstring.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="log.c">
@@ -68,6 +81,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="readline.h" />
+		<Unit filename="test_app.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="validators.c">
 			<Option compilerVar="CC" />
 		</Unit>

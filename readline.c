@@ -45,8 +45,8 @@ rln_init(const char *prompt, void (*callback)(const char*),
       add_history(buf);
 
     callback(buf);
+    free(buf);
   }
-  free(buf);
 
   return 0;
 }
@@ -101,7 +101,7 @@ rln_completion_find(const char *text, struct complhead *head)
   return node_return;
 }
 
-int
+struct complnode *
 rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
 {
   int i;
@@ -128,14 +128,13 @@ rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
     snprintf(new_node->description, 64, node->description);
     new_node->type = node->type;
     new_node->optional = node->optional;
-    new_node->format = node->format;
     new_node->generator = node->generator;
     new_node->validator = node->validator;
     TAILQ_INSERT_TAIL(head_ptr, new_node, next);
 
     head_ptr = &new_node->head;
   }
-  return 0;
+  return new_node;
 }
 
 int
@@ -182,16 +181,19 @@ rln_completion_help(int _unused, int __unused)
 }
 
 int
-rln_command_completed(const char *command, char **command_full)
+rln_command_prepare(const char *command, char **command_name, char ***command_args)
 {
+  /* command_name should be freed later by caller */
   int ret = 0;
   struct complnode *node;
   struct complhead *head;
   char *buff, *buff_ptr, *token;
 
   head = rln_coml_head;
-  /* FIXME: do not use fixed sized buffer */
-  *command_full = malloc(255);
+  int args_size = 5;
+  int args_count = 0;
+  char **args = malloc(args_size*sizeof(char*));
+
   buff_ptr = buff = strdup(command);
   while ((token=strsep(&buff, " "))!=NULL) {
     /* Skip the seperator itself */
@@ -201,14 +203,21 @@ rln_command_completed(const char *command, char **command_full)
     if ((node = rln_completion_find(token, head))!=NULL) {
       switch (node->type) {
       case COMPLTYPE_STATIC:
-        strcat(*command_full, node->command);
+        args[args_count++] = strdup(node->command);
+        if (*command_name==NULL)
+          *command_name = args[0];
         break;
       case COMPLTYPE_VARIABLE:
-        strcat(*command_full, token);
+        args[args_count++] = strdup(token);
         break;
       }
     } else {
-      strcat(*command_full, token);
+      args[args_count++] = strdup(token);
+    }
+
+    if (args_count == args_size) {
+      args_size += 1;
+      args = realloc(args, args_size*sizeof(char*));
     }
 
     if (node) {
@@ -216,13 +225,12 @@ rln_command_completed(const char *command, char **command_full)
     } else {
       ret = -1;
       /* TODO: append rest of the cmd to the full command */
-      goto rln_command_completed_done;
+      goto rln_command_prepare_done;
     }
-
-    strcat(*command_full, " ");
   }
-
-  rln_command_completed_done:
+  args[args_count] = NULL;
+  *command_args = args;
+  rln_command_prepare_done:
   free(buff_ptr);
   return ret;
 }
