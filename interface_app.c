@@ -59,4 +59,8 @@ callback(const char *cmd)
 {
   if (strcmp(cmd, "exit")==0)
     exit(0);
+
+  char *command;
+  rln_command_completed(cmd, &command);
+  printf("%s\n", command);
 }

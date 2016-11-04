@@ -36,5 +36,6 @@ extern int                 rln_init(const char*,
 extern struct complnode   *rln_completion_find_cmd(const char*, struct complhead*);
 extern struct complnode   *rln_completion_find_syntax(const char*, struct complhead*);
 extern int                 rln_completion_add(const struct complnode[], struct complhead*);
+extern int                 rln_command_completed(const char*, char**);
 
 #endif // _COMPLETION_H_

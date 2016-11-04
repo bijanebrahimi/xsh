@@ -181,6 +181,52 @@ rln_completion_help(int _unused, int __unused)
   return 0;
 }
 
+int
+rln_command_completed(const char *command, char **command_full)
+{
+  int ret = 0;
+  struct complnode *node;
+  struct complhead *head;
+  char *buff, *buff_ptr, *token;
+
+  head = rln_coml_head;
+  /* FIXME: do not use fixed sized buffer */
+  *command_full = malloc(255);
+  buff_ptr = buff = strdup(command);
+  while ((token=strsep(&buff, " "))!=NULL) {
+    /* Skip the seperator itself */
+    if (token[0]=='\0')
+      continue;
+
+    if ((node = rln_completion_find(token, head))!=NULL) {
+      switch (node->type) {
+      case COMPLTYPE_STATIC:
+        strcat(*command_full, node->command);
+        break;
+      case COMPLTYPE_VARIABLE:
+        strcat(*command_full, token);
+        break;
+      }
+    } else {
+      strcat(*command_full, token);
+    }
+
+    if (node) {
+      head = &node->head;
+    } else {
+      ret = -1;
+      /* TODO: append rest of the cmd to the full command */
+      goto rln_command_completed_done;
+    }
+
+    strcat(*command_full, " ");
+  }
+
+  rln_command_completed_done:
+  free(buff_ptr);
+  return ret;
+}
+
 char**
 completion(const char *text, int start, int end)
 {
