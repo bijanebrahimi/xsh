@@ -26,7 +26,6 @@ main(int argc, const char **argv)
     {"address", COMPLTYPE_STATIC, 0, COMPLFMT_NONE, NULL, NULL, "address", "IP Address Manipulting Command"},
     {"<ip>", COMPLTYPE_VARIABLE, 0, COMPLFMT_NONE, NULL, validator_ip, "A.B.C.D", "IPv4 Address"},
     {"<netmask>", COMPLTYPE_VARIABLE, 0, COMPLFMT_NONE, NULL, validator_ip, "A.B.C.D", "IPv4 Netmask Address"},
-    {"secondary", COMPLTYPE_STATIC, 1, COMPLFMT_NONE, NULL, NULL, "seondary", "IPv4 Alias"},
     {NULL}
   };
   rln_completion_add(compl_ip, &compl_head);
@@ -36,6 +35,7 @@ main(int argc, const char **argv)
     {"address", COMPLTYPE_STATIC, 0, COMPLFMT_NONE, NULL, NULL, "address", "IP Address Manipulting Command"},
     {"<ip>", COMPLTYPE_VARIABLE, 0, COMPLFMT_NONE, NULL, NULL, "A.B.C.D", "IPv4 Address"},
     {"<network>", COMPLTYPE_VARIABLE, 0, COMPLFMT_NONE, NULL, validator_network, "1-32", "Network Number"},
+    {"secondary", COMPLTYPE_STATIC, 1, COMPLFMT_NONE, NULL, NULL, "secondary", "IPv4 Alias"},
     {NULL}
   };
   rln_completion_add(&compl_ip_network, &compl_head);
