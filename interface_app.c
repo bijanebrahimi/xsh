@@ -5,11 +5,13 @@
 #include <sys/queue.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <errno.h>
 #include "log.h"
 #include "readline.h"
 #include "validators.h"
 /* TODO: maybe a unified header file for completions */
 #include "ip_completion.h"
+#include "socket.h"
 
 #define PROMPT "R1(config-if) "
 void   callback(const char*);
@@ -27,8 +29,12 @@ main(int argc, const char **argv)
   /* Register word completions */
   ip_completion_init(&compl_head);
 
+  rln_init(PROMPT, NULL, &compl_head);
+  int res = sck_init(callback, &compl_head);
+  printf("%d %s\n", res, strerror(errno));
+
   /* Initialize readline */
-  rln_init(PROMPT, callback, &compl_head);
+  //rln_init(PROMPT, callback, &compl_head);
 
   return 0;
 }

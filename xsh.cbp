@@ -70,9 +70,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="ip_completion.h" />
-		<Unit filename="libstring.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="log.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -81,9 +78,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="readline.h" />
-		<Unit filename="test_app.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="validators.c">
 			<Option compilerVar="CC" />
 		</Unit>

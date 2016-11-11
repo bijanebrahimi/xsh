@@ -29,6 +29,10 @@ rln_init(const char *prompt, void (*callback)(const char*),
   /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
   rl_basic_word_break_characters = READLINE_BREAK_CHARS;
 
+  if (callback==NULL) {
+    return 0;
+  }
+
   /* bind trigger keys */
   rl_bind_key('?', rln_completion_help);
   rl_bind_key('\t', rl_complete);
@@ -55,7 +59,7 @@ struct complnode *
 rln_completion_find_command(const char *text, struct complhead *head)
 {
   struct complnode *node, *node_return=NULL;
-  if (TAILQ_EMPTY(head))
+  if (!text || !(*text) || TAILQ_EMPTY(head))
     return NULL;
 
   node = TAILQ_FIRST(head);
