@@ -10,7 +10,6 @@
 #include "validators.h"
 /* TODO: maybe a unified header file for completions */
 #include "ip_completion.h"
-#include "lib_string.h"
 
 #define PROMPT "R1(config-if) "
 void   callback(const char*);
@@ -40,11 +39,12 @@ callback(const char *cmd)
   if (strcmp(cmd, "exit")==0)
     exit(0);
 
+  int cmd_argc;
   char *cmd_name=NULL, **cmd_args=(char**)NULL;
   char *envs[] = {"PATH=/home/bijan/Projects/c/xsh/", NULL};
 
   /* convert input to full command syntax */
-  if (rln_command_prepare(cmd, &cmd_name, &cmd_args)) {
+  if (rln_command_prepare(cmd, &cmd_name, &cmd_args, &cmd_argc)) {
     printf("%% Not a valid command.\n");
     goto callback_done;
   }
@@ -59,7 +59,7 @@ callback(const char *cmd)
   callback_cleanup:
   callback_done:
   free(cmd_name);
-  for(int i=0; cmd_args[i++];)
+  for(int i=0; (i>cmd_argc && cmd_args[i++]);)
     free(cmd_args[i]);
   free(cmd_args);
   return;

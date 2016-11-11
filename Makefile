@@ -23,4 +23,4 @@ all: $(TARGETS)
 	$(CC) -MM $(CFLAGS) $*.c > $*.d
 
 clean:
-	rm *.o *.d $(TARGETS_EXEC)
+	rm -f *.o *.d $(TARGETS_EXEC)

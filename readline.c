@@ -181,9 +181,9 @@ rln_completion_help(int _unused, int __unused)
 }
 
 int
-rln_command_prepare(const char *command, char **command_name, char ***command_args)
+rln_command_prepare(const char *cmd, char **cmd_name, char ***cmd_argv, int *cmd_argc)
 {
-  /* command_name should be freed later by caller */
+  /* cmd_name should be freed later by caller */
   int ret = 0;
   struct complnode *node;
   struct complhead *head;
@@ -191,10 +191,10 @@ rln_command_prepare(const char *command, char **command_name, char ***command_ar
 
   head = rln_coml_head;
   int args_size = 5;
-  int args_count = 0;
+  *cmd_argc = 0;
   char **args = malloc(args_size*sizeof(char*));
 
-  buff_ptr = buff = strdup(command);
+  buff_ptr = buff = strdup(cmd);
   while ((token=strsep(&buff, " "))!=NULL) {
     /* Skip the seperator itself */
     if (token[0]=='\0')
@@ -203,19 +203,19 @@ rln_command_prepare(const char *command, char **command_name, char ***command_ar
     if ((node = rln_completion_find(token, head))!=NULL) {
       switch (node->type) {
       case COMPLTYPE_STATIC:
-        args[args_count++] = strdup(node->command);
-        if (*command_name==NULL)
-          *command_name = args[0];
+        args[(*cmd_argc)++] = strdup(node->command);
+        if (*cmd_name==NULL)
+          *cmd_name = args[0];
         break;
       case COMPLTYPE_VARIABLE:
-        args[args_count++] = strdup(token);
+        args[(*cmd_argc)++] = strdup(token);
         break;
       }
     } else {
-      args[args_count++] = strdup(token);
+      args[(*cmd_argc)++] = strdup(token);
     }
 
-    if (args_count == args_size) {
+    if (*cmd_argc == args_size) {
       args_size += 1;
       args = realloc(args, args_size*sizeof(char*));
     }
@@ -228,8 +228,8 @@ rln_command_prepare(const char *command, char **command_name, char ***command_ar
       goto rln_command_prepare_done;
     }
   }
-  args[args_count] = NULL;
-  *command_args = args;
+  args[*cmd_argc] = NULL;
+  *cmd_argv = args;
   rln_command_prepare_done:
   free(buff_ptr);
   return ret;
