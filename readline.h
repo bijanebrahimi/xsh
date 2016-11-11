@@ -10,8 +10,6 @@
 
 typedef enum {COMPLTYPE_STATIC, COMPLTYPE_VARIABLE} compltype_t;
 typedef enum {false, true} boolean_t;
-typedef enum {COMPLFMT_IP, COMPLFMT_NETMASK, COMPLFMT_NETWORK,
-              COMPLFMT_NUBER, COMPLFMT_TEXT, COMPLFMT_NONE} complfmt_t;
 
 TAILQ_HEAD(complhead, complnode);
 typedef struct complnode {
@@ -19,7 +17,6 @@ typedef struct complnode {
   char command[32];     /* apears in command */
   int  type;            /* static/variable */
   int  optional;        /* mandtory/optional */
-  int  format;   /* ip/network/netmask/number/... */
   char* (*generator)(const char*, int); /* completion generator function */
   int (*validator)(const char*);        /* validator function */
   char hint[16];    /* short help text */
@@ -35,6 +32,7 @@ extern int                 rln_init(const char*,
                                     struct complhead*);
 extern struct complnode   *rln_completion_find_cmd(const char*, struct complhead*);
 extern struct complnode   *rln_completion_find_syntax(const char*, struct complhead*);
-extern int                 rln_completion_add(const struct complnode[], struct complhead*);
+extern struct complnode   *rln_completion_add(const struct complnode[], struct complhead*);
+extern int                 rln_command_prepare(const char*, char**, char***, int*);
 
 #endif // _COMPLETION_H_

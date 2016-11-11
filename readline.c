@@ -45,8 +45,8 @@ rln_init(const char *prompt, void (*callback)(const char*),
       add_history(buf);
 
     callback(buf);
+    free(buf);
   }
-  free(buf);
 
   return 0;
 }
@@ -101,7 +101,7 @@ rln_completion_find(const char *text, struct complhead *head)
   return node_return;
 }
 
-int
+struct complnode *
 rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
 {
   int i;
@@ -128,14 +128,13 @@ rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
     snprintf(new_node->description, 64, node->description);
     new_node->type = node->type;
     new_node->optional = node->optional;
-    new_node->format = node->format;
     new_node->generator = node->generator;
     new_node->validator = node->validator;
     TAILQ_INSERT_TAIL(head_ptr, new_node, next);
 
     head_ptr = &new_node->head;
   }
-  return 0;
+  return new_node;
 }
 
 int
@@ -179,6 +178,61 @@ rln_completion_help(int _unused, int __unused)
 
   free(buff_ptr);
   return 0;
+}
+
+int
+rln_command_prepare(const char *cmd, char **cmd_name, char ***cmd_argv, int *cmd_argc)
+{
+  /* cmd_name should be freed later by caller */
+  int ret = 0;
+  struct complnode *node;
+  struct complhead *head;
+  char *buff, *buff_ptr, *token;
+
+  head = rln_coml_head;
+  int args_size = 5;
+  *cmd_argc = 0;
+  char **args = malloc(args_size*sizeof(char*));
+
+  buff_ptr = buff = strdup(cmd);
+  while ((token=strsep(&buff, " "))!=NULL) {
+    /* Skip the seperator itself */
+    if (token[0]=='\0')
+      continue;
+
+    if ((node = rln_completion_find(token, head))!=NULL) {
+      switch (node->type) {
+      case COMPLTYPE_STATIC:
+        args[(*cmd_argc)++] = strdup(node->command);
+        if (*cmd_name==NULL)
+          *cmd_name = args[0];
+        break;
+      case COMPLTYPE_VARIABLE:
+        args[(*cmd_argc)++] = strdup(token);
+        break;
+      }
+    } else {
+      args[(*cmd_argc)++] = strdup(token);
+    }
+
+    if (*cmd_argc == args_size) {
+      args_size += 1;
+      args = realloc(args, args_size*sizeof(char*));
+    }
+
+    if (node) {
+      head = &node->head;
+    } else {
+      ret = -1;
+      /* TODO: append rest of the cmd to the full command */
+      goto rln_command_prepare_done;
+    }
+  }
+  args[*cmd_argc] = NULL;
+  *cmd_argv = args;
+  rln_command_prepare_done:
+  free(buff_ptr);
+  return ret;
 }
 
 char**

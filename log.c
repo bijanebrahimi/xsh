@@ -8,16 +8,16 @@ struct testss{
   u_long level;
   const char *name;
 } log_names[] = {
-  {LogINFO, "INFO"},
-  {LogDEBUG, "DEBUG"},
-  {LogERROR, "ERROR"},
+  {LOG_INFO, "INFO"},
+  {LOG_DEBUG, "DEBUG"},
+  {LOG_ERR, "ERROR"},
   {0, '\0'}
 };
 
 #ifdef DEBUG
 int log_levels = (int)(LogALL);
 #else
-int log_levels = (int)(LogINFO|LogERROR);
+int log_levels = (int)(LOG_INFO|LOG_ERR);
 #endif
 
 extern void
@@ -31,7 +31,7 @@ log_print(int level, const char *fmt, ...)
   log_name = log_names[log_index].name;
   va_list ap;
   va_start(ap, fmt);
-  if (level&LogERROR)
+  if (level&LOG_ERR)
     vfprintf(stderr, fmt, ap);
   else
     vfprintf(stdout, fmt, ap);

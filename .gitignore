@@ -37,3 +37,4 @@ interface
 *.su
 .gdb*
 *.depend
+*.layout
