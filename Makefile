@@ -1,5 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -w -lm -lreadline -g
+LDFLAGS=
 
 #TARGETS=$(shell ls *_app.c | sed 's/\.c//')
 SRCS=$(wildcard *.c)
@@ -15,7 +16,7 @@ all: $(TARGETS)
 
 # link only targets
 %_app: %_app.o $(filter-out $(TARGETS_OBJS),$(OBJS))
-	$(CC) $(CFLAGS) $(filter-out $(TARGETS_OBJS),$(OBJS)) $< -o $*
+	$(CC) $(CFLAGS) $(LDFLAGS) $(filter-out $(TARGETS_OBJS),$(OBJS)) $< -o $*
 
 # compile and generate dependency info
 %.o: %.c

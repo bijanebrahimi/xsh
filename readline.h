@@ -9,7 +9,6 @@
 
 
 typedef enum {COMPLTYPE_STATIC, COMPLTYPE_VARIABLE} compltype_t;
-typedef enum {false, true} boolean_t;
 
 TAILQ_HEAD(complhead, complnode);
 typedef struct complnode {
@@ -28,11 +27,10 @@ typedef struct complnode {
 
 
 extern int                 rln_init(const char*,
-                                    void (*)(const char*),
-                                    struct complhead*);
-extern struct complnode   *rln_completion_find_cmd(const char*, struct complhead*);
-extern struct complnode   *rln_completion_find_syntax(const char*, struct complhead*);
+                                    void (*)(const char*));
+extern void                rln_callback(const char*);
+extern struct complhead   *rln_completion_queue(void);
+extern struct complnode   *rln_completion_find_command(const char*);
 extern struct complnode   *rln_completion_add(const struct complnode[], struct complhead*);
-extern int                 rln_command_prepare(const char*, char**, char***, int*);
 
 #endif // _COMPLETION_H_

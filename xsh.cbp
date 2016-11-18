@@ -60,27 +60,46 @@
 		<Unit filename="argp_app.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="argp_app.d" />
 		<Unit filename="interface_app.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="interface_app.d" />
 		<Unit filename="ip_app.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="ip_app.d" />
 		<Unit filename="ip_completion.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="ip_completion.d" />
 		<Unit filename="ip_completion.h" />
 		<Unit filename="log.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="log.d" />
 		<Unit filename="log.h" />
 		<Unit filename="readline.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="readline.d" />
 		<Unit filename="readline.h" />
+		<Unit filename="server.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="server.d" />
+		<Unit filename="server.h" />
+		<Unit filename="socket.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="socket.d" />
+		<Unit filename="socket.h" />
+		<Unit filename="thread.d" />
+		<Unit filename="types.h" />
 		<Unit filename="validators.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="validators.d" />
 		<Unit filename="validators.h" />
 		<Extensions>
 			<code_completion />

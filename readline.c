@@ -4,10 +4,13 @@
 #include <sys/queue.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+//#include "types.h"
+#include "server.h"
 #include "readline.h"
 
-struct complhead *rln_coml_head = NULL,
-                 *rln_compl_ptr = NULL;
+struct complhead  rln_compl_head = TAILQ_HEAD_INITIALIZER(rln_compl_head),
+                 *rln_compl_ptr = &rln_compl_head;
+rl_vcpfunc_t     *rln_callback_p;
 
 int    rln_completion_help(int, int);
 char  *completion_entry(const char*, int);
@@ -15,10 +18,13 @@ char **completion(const char*, int, int);
 
 
 int
-rln_init(const char *prompt, void (*callback)(const char*),
-         struct complhead* head)
+rln_init(const char *prompt, void (*callback)(const char*))
 {
-  rln_coml_head = head;
+  if (callback==NULL)
+    return 0;
+
+  /* set global callback pointer */
+  rln_callback_p = (rl_vcpfunc_t*)callback;
 
   /* gnu readline initialization */
   rl_attempted_completion_function = completion;
@@ -26,39 +32,41 @@ rln_init(const char *prompt, void (*callback)(const char*),
   /* maximum number to show without confirms */
   rl_completion_query_items = 15;
 
-  /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
-  rl_basic_word_break_characters = READLINE_BREAK_CHARS;
-
-  if (callback==NULL) {
-    return 0;
-  }
-
   /* bind trigger keys */
   rl_bind_key('?', rln_completion_help);
   rl_bind_key('\t', rl_complete);
 
-  char *buf;
-  while ((buf = readline(prompt))!=NULL) {
-
-    /* Ignoring empty commands */
-    if (buf[0]==0)
-      continue;
-
-    /* Ignore adding commands to history if spaced */
-    if (buf[0]!=' ')
-      add_history(buf);
-
-    callback(buf);
-    free(buf);
-  }
+  /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
+  rl_basic_word_break_characters = READLINE_BREAK_CHARS;
+  srv_register(0, (callback_t*)rl_callback_read_char);
+  rl_callback_handler_install(prompt, rln_callback);
 
   return 0;
 }
 
+void
+rln_callback(const char* command)
+{
+  if (!(command && *command))
+    return;
+
+  if (*command!=' ')
+    add_history(command);
+
+  rln_callback_p(command);
+}
+
+struct complhead *
+rln_completion_queue(void)
+{
+  return &rln_compl_head;
+}
+
 struct complnode *
-rln_completion_find_command(const char *text, struct complhead *head)
+rln_completion_find_cmd(const char *text, struct complhead *head)
 {
   struct complnode *node, *node_return=NULL;
+
   if (!text || !(*text) || TAILQ_EMPTY(head))
     return NULL;
 
@@ -72,6 +80,12 @@ rln_completion_find_command(const char *text, struct complhead *head)
     }
   }
   return node_return;
+}
+
+struct complnode *
+rln_completion_find_command(const char *text)
+{
+  return rln_completion_find_cmd(text, &rln_compl_head);
 }
 
 struct complnode *
@@ -119,7 +133,7 @@ rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
     if (*node->command==NULL)
       break;
 
-    if ((new_node = rln_completion_find_command(node->command, head_ptr))!=NULL) {
+    if ((new_node = rln_completion_find_cmd(node->command, head_ptr))!=NULL) {
       head_ptr = &new_node->head;
       continue;
     }
@@ -149,7 +163,7 @@ rln_completion_help(int _unused, int __unused)
   char **matches, *buff, *buff_ptr, *token;
 
 
-  head = rln_coml_head;
+  head = &rln_compl_head;
   matches = (char **)NULL;
   buff_ptr = buff = strndup(rl_line_buffer, rl_point);
   while ((token=strsep(&buff, " "))!=NULL) {
@@ -193,7 +207,7 @@ rln_command_prepare(const char *cmd, char **cmd_name, char ***cmd_argv, int *cmd
   struct complhead *head;
   char *buff, *buff_ptr, *token;
 
-  head = rln_coml_head;
+  head = &rln_compl_head;
   int args_size = 5;
   *cmd_argc = 0;
   char **args = malloc(args_size*sizeof(char*));
@@ -246,7 +260,7 @@ completion(const char *text, int start, int end)
   struct complhead *head;
   char **matches, *buff, *buff_ptr, *token;
 
-  head = rln_coml_head;
+  head = &rln_compl_head;
   matches = (char **)NULL;
   buff_ptr = buff = strndup(rl_line_buffer, start);
   while ((token=strsep(&buff, " "))!=NULL) {
