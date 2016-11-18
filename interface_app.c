@@ -1,20 +1,19 @@
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
-#include <sys/queue.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 #include "log.h"
 #include "readline.h"
-#include "validators.h"
 /* TODO: maybe a unified header file for completions */
 #include "ip_completion.h"
+#include "server.h"
+#include "socket.h"
 
 #define PROMPT "R1(config-if) "
 void   callback(const char*);
-struct complhead compl_head = TAILQ_HEAD_INITIALIZER(compl_head);
 int    execute(const char*, const char**, const char**);
+void   handle_termination(int);
 
 int
 main(int argc, const char **argv)
@@ -23,12 +22,23 @@ main(int argc, const char **argv)
 
   /* TODO: ignore user's C^Z C^D */
   signal(SIGINT, SIG_IGN);
+  signal(SIGTERM, handle_termination);
+  signal(SIGSEGV, handle_termination);
+  signal(SIGABRT, handle_termination);
+  signal(SIGQUIT, handle_termination);
+
+  /*
+   * Initializing server which monitors registered sockets (stdin/unix_socket) activity.
+   */
+  srv_init();
+  rln_init(PROMPT, callback);
+  sck_init();
 
   /* Register word completions */
-  ip_completion_init(&compl_head);
+  ip_completion_init(rln_completion_queue());
 
-  /* Initialize readline */
-  rln_init(PROMPT, callback, &compl_head);
+  /* Forever loop */
+  srv_loop();
 
   return 0;
 }
@@ -41,7 +51,7 @@ callback(const char *cmd)
 
   int cmd_argc;
   char *cmd_name=NULL, **cmd_args=(char**)NULL;
-  char *envs[] = {"PATH=/home/bijan/Projects/c/xsh/", NULL};
+  char *envs[] = {"PATH=.", NULL};
 
   /* convert input to full command syntax */
   if (rln_command_prepare(cmd, &cmd_name, &cmd_args, &cmd_argc)) {
@@ -50,18 +60,21 @@ callback(const char *cmd)
   }
 
   /* Avoid running command which completion doesn't know about */
-  if (!rln_completion_find_command(cmd_name, &compl_head)) {
+  if (!rln_completion_find_command(cmd_name)) {
     printf("%% Command Not Found.\n");
     goto callback_cleanup;
   }
 
   int status = execute(cmd_name, cmd_args, envs);
+
   callback_cleanup:
   callback_done:
+  free(cmd);
   free(cmd_name);
   for(int i=0; (i>cmd_argc && cmd_args[i++]);)
     free(cmd_args[i]);
   free(cmd_args);
+
   return;
 }
 
@@ -82,4 +95,12 @@ execute(const char *cmd, const char **args, const char **envs)
   while (waitpid(pid, &status, 0)!=pid) ;
 
   return status;
+}
+
+void
+handle_termination(int signo)
+{
+  log_debug("graceful %s", "shutdown");
+  sck_cleanup();
+  exit(1);
 }

@@ -4,45 +4,48 @@
 #include <sys/types.h>
 #include "log.h"
 
-struct testss{
+struct{
   u_long level;
-  const char *name;
-} log_names[] = {
-  {LOG_INFO, "INFO"},
-  {LOG_DEBUG, "DEBUG"},
-  {LOG_ERR, "ERROR"},
-  {0, '\0'}
+  const char *label;
+} log_labels[] = {
+  {LOG_INFO,   "INFO: "},
+  {LOG_DEBUG,  "DEBUG: "},
+  {LOG_DEBUG,  "WARNING: "},
+  {LOG_ERR,    "ERROR: "}
 };
 
-#ifdef DEBUG
-int log_levels = (int)(LogALL);
-#else
-int log_levels = (int)(LOG_INFO|LOG_ERR);
-#endif
+int log_levels = (int)(LOG_ALL);
 
 extern void
 log_print(int level, const char *fmt, ...)
 {
   if (!(log_levels&level))
     return ;
+
   int log_index, log_descriptor;
-  const char *log_name;
+  const char *log_label, *fmt_tmp=NULL;
+
+  /* Get log label */
   log_index = (int)log2((double)level);
-  log_name = log_names[log_index].name;
+  log_label = log_labels[log_index].label;
+
+  /* get variable list */
   va_list ap;
   va_start(ap, fmt);
-  if (level&LOG_ERR)
-    vfprintf(stderr, fmt, ap);
-  else
-    vfprintf(stdout, fmt, ap);
-  va_end(ap);
-}
 
-extern void
-log_dump(int level, const char *buff, size_t buff_len)
-{
-  int i;
-  for (i=0; i<buff_len; i++)
-    fprintf(stdout, "%c", buff[i]);
-  fprintf(stdout, "\n");
+  /* prepare new temporary format string */
+  fmt_tmp = malloc(strlen(fmt)+strlen(log_label)+1);
+  if (!fmt_tmp)
+    return;
+
+  /* inject log label info format string */
+  sprintf(fmt_tmp, "%s%s\n", log_label, fmt);
+  if (level&LOG_ERR)
+    vfprintf(stderr, fmt_tmp, ap);
+  else
+    vfprintf(stdout, fmt_tmp, ap);
+
+  /* cleanup */
+  free(fmt_tmp);
+  va_end(ap);
 }
