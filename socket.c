@@ -17,7 +17,7 @@ int sock_un;
 void sck_callback(int);
 
 int
-sck_init()
+sck_init(void)
 {
   int sock_un = socket(AF_UNIX, SOCK_STREAM, 0);
   if (!sock_un) {
@@ -58,16 +58,16 @@ sck_callback(int sock_un)
     return;
   }
 
-  log_debug("received socket %d", sock_client);
+  /* TODO: should communicate using a defined command struct header. */
   buf = malloc(buf_total_sz);
   buf_ptr = buf;
   if (!buf) {
     log_error("failed to allocated memory: %s", strerror(errno));
-    return;
+    goto sck_callback_read_failed;
   }
 
   while (true) {
-    buf_free_sz = buf + buf_total_sz - buf_ptr;
+    buf_free_sz = buf + buf_total_sz - buf_ptr - 1;
     if (buf_free_sz<=0) {
       buf_total_sz *= 2;
       buf_tmp = realloc(buf, buf_total_sz);
@@ -78,7 +78,7 @@ sck_callback(int sock_un)
 
       buf = buf_tmp;
       buf_ptr = buf + buf_sz;
-      buf_free_sz = buf + buf_total_sz - buf_ptr;
+      buf_free_sz = buf + buf_total_sz - buf_ptr - 1;
     }
 
     buf_ptr_sz = read(sock_client, buf_ptr, buf_free_sz);
@@ -86,14 +86,26 @@ sck_callback(int sock_un)
     if (buf_ptr_sz==0)
       break;
     if (buf_ptr_sz==-1)
-      goto sck_callback_failed;
+      goto sck_callback_read_finished;
 
     buf_ptr += buf_ptr_sz;
     buf_sz += buf_ptr_sz;
   }
 
+  buf[buf_sz] = '\0';
   log_info("received: %s", buf);
-  sck_callback_failed:
+  sck_callback_read_finished:
   free(buf);
+  sck_callback_read_failed:
+  close(sock_client);
   return;
+}
+
+void
+sck_cleanup(void)
+{
+  char sck_path[256];
+
+  sprintf(sck_path, SOCKET_FMT, (int)getpid());
+  unlink(sck_path);
 }

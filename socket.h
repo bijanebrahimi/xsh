@@ -13,4 +13,7 @@ struct msg_hdr {
   pid_t   msg_pid;
 };
 
+extern void    sck_cleanup(void);
+extern int     sck_init(void);
+
 #endif

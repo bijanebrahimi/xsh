@@ -7,10 +7,10 @@
 #define LOG_WARN  0x04
 #define LOG_ERR   0x08
 
-#define log_error(format, ...)    log_print(LOG_ERR,   format, __VA_ARGS__)
-#define log_info(format, ...)     log_print(LOG_INFO,  format, __VA_ARGS__)
-#define log_debug(format, ...)    log_print(LOG_DEBUG, format, __VA_ARGS__)
-#define log_warning(format, ...)  log_print(LOG_WARN,  format, __VA_ARGS__)
+#define log_error(...)    log_print(LOG_ERR,   __VA_ARGS__)
+#define log_info(...)     log_print(LOG_INFO,  __VA_ARGS__)
+#define log_debug(...)    log_print(LOG_DEBUG, __VA_ARGS__)
+#define log_warning(...)  log_print(LOG_WARN,  __VA_ARGS__)
 
 
 extern void log_print(int, const char*, ...);

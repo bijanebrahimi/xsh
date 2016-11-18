@@ -3,12 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <sys/queue.h>
 #include "log.h"
 #include "readline.h"
-#include "validators.h"
 /* TODO: maybe a unified header file for completions */
 #include "ip_completion.h"
 #include "server.h"
@@ -17,6 +13,7 @@
 #define PROMPT "R1(config-if) "
 void   callback(const char*);
 int    execute(const char*, const char**, const char**);
+void   handle_termination(int);
 
 int
 main(int argc, const char **argv)
@@ -24,16 +21,21 @@ main(int argc, const char **argv)
   struct complnode *node, *node_tmp;
 
   /* TODO: ignore user's C^Z C^D */
-  log_error("Helo %s", "world");
   signal(SIGINT, SIG_IGN);
+  signal(SIGTERM, handle_termination);
+  signal(SIGSEGV, handle_termination);
+  signal(SIGABRT, handle_termination);
+  signal(SIGQUIT, handle_termination);
 
-  /* Register word completions */
-  ip_completion_init(rln_completion_queue());
-
-  /* Initialize readline */
+  /*
+   * Initializing server which monitors registered sockets (stdin/unix_socket) activity.
+   */
   srv_init();
   rln_init(PROMPT, callback);
   sck_init();
+
+  /* Register word completions */
+  ip_completion_init(rln_completion_queue());
 
   /* Forever loop */
   srv_loop();
@@ -93,4 +95,12 @@ execute(const char *cmd, const char **args, const char **envs)
   while (waitpid(pid, &status, 0)!=pid) ;
 
   return status;
+}
+
+void
+handle_termination(int signo)
+{
+  log_debug("graceful %s", "shutdown");
+  sck_cleanup();
+  exit(1);
 }
