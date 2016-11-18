@@ -1,40 +1,37 @@
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/un.h>
+#include <sys/socket.h>
+#include "log.h"
 #include "socket.h"
 #include "readline.h"
 
-void handle_term(int signo) {
-  char buff[256];
-  printf("SIGNAL %d\n", signo);
-  sprintf(buff, SOCKET_FMT, 0);
-  unlink(buff);
-  exit(0);
-}
-
-
 int
-sck_init(void (*callback)(const char*), struct complhead* head)
+sck_init(void (*callback)(const char*))
 {
   int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (!fd)
+  if (!fd) {
+    log_print(LOG_ERR, "failed to created socket: %s", strerror(errno));
     return 1;
+  }
 
-  signal(SIGTERM, handle_term);
-  signal(SIGINT, handle_term);
-
-  struct sockaddr_un addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sun_family = AF_UNIX;
-  sprintf(addr.sun_path, SOCKET_FMT, 0);
-  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
+  struct sockaddr_un srv_sock;
+  memset(&srv_sock, 0, sizeof(srv_sock));
+  srv_sock.sun_family = AF_UNIX;
+  sprintf(srv_sock.sun_path, SOCKET_FMT, (int)getpid());
+  if (bind(fd, (struct sockaddr*)&srv_sock, sizeof(srv_sock)) == -1) {
+    log_print(LOG_ERR, "failed to bind to socket: %s", strerror(errno));
     return 2;
+  }
 
-  if (listen(fd, 5) == -1)
+  if (listen(fd, 5) == -1) {
+    log_print(LOG_ERR, "failed to listen to socket: %s", strerror(errno));
     return 3;
+  }
 
   char buff[1024];
   int clnt, bytes;
@@ -61,4 +58,14 @@ sck_init(void (*callback)(const char*), struct complhead* head)
   }
 
   return 0;
+}
+
+void
+sck_cleanup(int signo) {
+  pid_t pid;
+  char buff[256];
+
+  sprintf(buff, SOCKET_FMT, (int)getpid());
+  unlink(buff);
+  exit(0);
 }

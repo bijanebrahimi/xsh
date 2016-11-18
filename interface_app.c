@@ -24,6 +24,7 @@ main(int argc, const char **argv)
   struct complnode *node, *node_tmp;
 
   /* TODO: ignore user's C^Z C^D */
+  log_error("Helo %s", "world");
   signal(SIGINT, SIG_IGN);
 
   /* Register word completions */
