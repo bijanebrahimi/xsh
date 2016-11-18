@@ -14,11 +14,7 @@ struct{
   {LOG_ERR,    "ERROR: "}
 };
 
-#ifdef DEBUG
-int log_levels = (int)(LogALL);
-#else
-int log_levels = (int)(LOG_INFO|LOG_ERR);
-#endif
+int log_levels = (int)(LOG_ALL);
 
 extern void
 log_print(int level, const char *fmt, ...)

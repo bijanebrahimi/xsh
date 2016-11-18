@@ -15,7 +15,7 @@ rl_vcpfunc_t     *rln_callback_p;
 int    rln_completion_help(int, int);
 char  *completion_entry(const char*, int);
 char **completion(const char*, int, int);
-
+void   rln_callback_read_char(int);
 
 int
 rln_init(const char *prompt, void (*callback)(const char*))
@@ -38,10 +38,16 @@ rln_init(const char *prompt, void (*callback)(const char*))
 
   /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
   rl_basic_word_break_characters = READLINE_BREAK_CHARS;
-  srv_register(0, (callback_t*)rl_callback_read_char);
+  srv_register(0, (callback_t*)rln_callback_read_char);
   rl_callback_handler_install(prompt, rln_callback);
 
   return 0;
+}
+
+void
+rln_callback_read_char(int fd)
+{
+  rl_callback_read_char();
 }
 
 void

@@ -6,16 +6,22 @@
 #include <string.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#include <sys/queue.h>
+#include "types.h"
 #include "log.h"
 #include "socket.h"
+#include "server.h"
 #include "readline.h"
 
+int sock_un;
+void sck_callback(int);
+
 int
-sck_init(void (*callback)(const char*))
+sck_init()
 {
-  int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (!fd) {
-    log_print(LOG_ERR, "failed to created socket: %s", strerror(errno));
+  int sock_un = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (!sock_un) {
+    log_error("failed to created socket: %s", strerror(errno));
     return 1;
   }
 
@@ -23,49 +29,71 @@ sck_init(void (*callback)(const char*))
   memset(&srv_sock, 0, sizeof(srv_sock));
   srv_sock.sun_family = AF_UNIX;
   sprintf(srv_sock.sun_path, SOCKET_FMT, (int)getpid());
-  if (bind(fd, (struct sockaddr*)&srv_sock, sizeof(srv_sock)) == -1) {
-    log_print(LOG_ERR, "failed to bind to socket: %s", strerror(errno));
+  unlink(srv_sock.sun_path);
+  if (bind(sock_un, (struct sockaddr*)&srv_sock, sizeof(srv_sock)) == -1) {
+    log_error("failed to bind to socket: %s", strerror(errno));
     return 2;
   }
 
-  if (listen(fd, 5) == -1) {
-    log_print(LOG_ERR, "failed to listen to socket: %s", strerror(errno));
-    return 3;
+  /* FIXME: we only support a client at a time connecting to unix socket */
+  if (listen(sock_un, 1) == -1) {
+    log_error("failed to listen on socket: %s", strerror(errno));
+    return 2;
   }
 
-  char buff[1024];
-  int clnt, bytes;
-  while (1) {
-    if ((clnt=accept(fd, NULL, NULL)) == -1)
-      continue;
-
-    dup2(clnt, STDOUT_FILENO);
-    dup2(clnt, STDERR_FILENO);
-
-    while ((bytes=read(clnt, buff, sizeof(buff)))) {
-      if (bytes == -1)
-        return 4;
-      else if (bytes == 0) {
-        close(clnt);
-        break;
-      }
-
-      char *line = strchr(buff, '\n');
-      if (line)
-        *line='\0';
-      callback(buff);
-    }
-  }
+  srv_register(sock_un, (callback_t*)&sck_callback);
 
   return 0;
 }
 
 void
-sck_cleanup(int signo) {
-  pid_t pid;
-  char buff[256];
+sck_callback(int sock_un)
+{
+  int sock_client;
+  char *buf, *buf_ptr, *buf_tmp;
+  size_t buf_total_sz=8, buf_ptr_sz=0, buf_free_sz=0, buf_sz=0;
 
-  sprintf(buff, SOCKET_FMT, (int)getpid());
-  unlink(buff);
-  exit(0);
+  if ((sock_client=accept(sock_un, NULL, NULL)) == -1) {
+    log_error("failed to accept (%d): %s", sock_un, strerror(errno));
+    return;
+  }
+
+  log_debug("received socket %d", sock_client);
+  buf = malloc(buf_total_sz);
+  buf_ptr = buf;
+  if (!buf) {
+    log_error("failed to allocated memory: %s", strerror(errno));
+    return;
+  }
+
+  while (true) {
+    buf_free_sz = buf + buf_total_sz - buf_ptr;
+    if (buf_free_sz<=0) {
+      buf_total_sz *= 2;
+      buf_tmp = realloc(buf, buf_total_sz);
+
+      /* Returning current buffer in case no more memory is available */
+      if (!buf_tmp)
+        break;
+
+      buf = buf_tmp;
+      buf_ptr = buf + buf_sz;
+      buf_free_sz = buf + buf_total_sz - buf_ptr;
+    }
+
+    buf_ptr_sz = read(sock_client, buf_ptr, buf_free_sz);
+    /* FIXME: check for busy/slow device */
+    if (buf_ptr_sz==0)
+      break;
+    if (buf_ptr_sz==-1)
+      goto sck_callback_failed;
+
+    buf_ptr += buf_ptr_sz;
+    buf_sz += buf_ptr_sz;
+  }
+
+  log_info("received: %s", buf);
+  sck_callback_failed:
+  free(buf);
+  return;
 }

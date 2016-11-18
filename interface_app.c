@@ -30,13 +30,12 @@ main(int argc, const char **argv)
   /* Register word completions */
   ip_completion_init(rln_completion_queue());
 
-  //int res = sck_init(callback, &compl_head);
-  //printf("%d %s\n", res, strerror(errno));
-
   /* Initialize readline */
   srv_init();
   rln_init(PROMPT, callback);
+  sck_init();
 
+  /* Forever loop */
   srv_loop();
 
   return 0;

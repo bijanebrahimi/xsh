@@ -13,7 +13,7 @@
      __typeof__ (b) _b = (b); \
    _a < _b ? _a : _b; })
 
-typedef void (callback_t)(void);
+typedef void (callback_t)(int);
 
 
 #endif // TYPES_H_INCLUDED

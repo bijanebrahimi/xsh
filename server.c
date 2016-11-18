@@ -53,7 +53,7 @@ srv_loop(void)
     TAILQ_FOREACH(thread, &head, siblings) {
       if (FD_ISSET(thread->clnt_fd, &read_set)) {
         /* Execute the callback function */
-        thread->clnt_func();
+        thread->clnt_func(thread->clnt_fd);
         FD_CLR(thread->clnt_fd, &read_set);
       }
     }
@@ -69,7 +69,7 @@ srv_register(int clnt_fd, callback_t *clnt_func)
     return -1;
 
   client_t *thread = malloc(sizeof(client_t));
-  if (!thread )
+  if (!thread)
     return -1;
 
   thread->clnt_fd = clnt_fd;
