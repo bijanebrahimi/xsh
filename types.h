@@ -14,6 +14,6 @@
    _a < _b ? _a : _b; })
 
 typedef void (callback_t)(int);
-
+typedef void (*callback_buffer_t)(caddr_t);
 
 #endif // TYPES_H_INCLUDED

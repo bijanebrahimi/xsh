@@ -3,35 +3,35 @@
 #include <stdlib.h>
 #include <sys/queue.h>
 #include "types.h"
-#include "server.h"
+#include "descriptor.h"
 
-struct clientq head = TAILQ_HEAD_INITIALIZER(head);
-int srv_append(client_t*);
-int srv_remove(client_t*);
+struct descriptor_queue head = TAILQ_HEAD_INITIALIZER(head);
+int dsc_append(descriptor_t*);
+int dsc_remove(descriptor_t*);
 
 int
-srv_init(void)
+dsc_init(void)
 {
   TAILQ_INIT(&head);
 }
 
 int
-srv_loop(void)
+dsc_loop(void)
 {
   int ready_fds, max_fd=0;
   fd_set read_set;
-  client_t *thread;
+  descriptor_t *thread;
 
   /* It's a forever loop */
   while (1) {
     /* Initializing read_set */
     FD_ZERO(&read_set);
     TAILQ_FOREACH(thread, &head, siblings) {
-      if (thread->clnt_fd<0)
+      if (thread->dsc_no<0)
         continue;
 
-      FD_SET(thread->clnt_fd, &read_set);
-      max_fd = max(thread->clnt_fd, max_fd);
+      FD_SET(thread->dsc_no, &read_set);
+      max_fd = max(thread->dsc_no, max_fd);
     }
 
     /* Check if there's ready descriptors */
@@ -51,10 +51,10 @@ srv_loop(void)
      * ready descriptor
      */
     TAILQ_FOREACH(thread, &head, siblings) {
-      if (FD_ISSET(thread->clnt_fd, &read_set)) {
+      if (FD_ISSET(thread->dsc_no, &read_set)) {
         /* Execute the callback function */
-        thread->clnt_func(thread->clnt_fd);
-        FD_CLR(thread->clnt_fd, &read_set);
+        thread->dsc_func(thread->dsc_no);
+        FD_CLR(thread->dsc_no, &read_set);
       }
     }
   }
@@ -63,23 +63,23 @@ srv_loop(void)
 }
 
 int
-srv_register(int clnt_fd, callback_t *clnt_func)
+dsc_register(int dsc_no, callback_t *dsc_func)
 {
-  if (clnt_fd<0 || clnt_func==NULL)
+  if (dsc_no<0 || dsc_func==NULL)
     return -1;
 
-  client_t *thread = malloc(sizeof(client_t));
+  descriptor_t *thread = malloc(sizeof(descriptor_t));
   if (!thread)
     return -1;
 
-  thread->clnt_fd = clnt_fd;
-  thread->clnt_func = clnt_func;
+  thread->dsc_no = dsc_no;
+  thread->dsc_func = dsc_func;
 
-  return srv_append(thread);
+  return dsc_append(thread);
 }
 
 int
-srv_append(client_t *thread)
+dsc_append(descriptor_t *thread)
 {
   if (TAILQ_EMPTY(&head))
     TAILQ_INSERT_HEAD(&head, thread, siblings);
@@ -90,13 +90,13 @@ srv_append(client_t *thread)
 }
 
 int
-srv_unregister(int socket, callback_t func)
+dsc_unregister(int socket, callback_t func)
 {
 
 }
 
 int
-srv_remove(client_t *thread)
+dsc_remove(descriptor_t *thread)
 {
   TAILQ_REMOVE(&head, thread, siblings);
 
@@ -104,7 +104,7 @@ srv_remove(client_t *thread)
 }
 
 int
-srv_notify(int socket)
+dsc_notify(int socket)
 {
 
 }

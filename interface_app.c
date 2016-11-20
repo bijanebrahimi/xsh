@@ -7,11 +7,12 @@
 #include "readline.h"
 /* TODO: maybe a unified header file for completions */
 #include "ip_completion.h"
-#include "server.h"
+#include "descriptor.h"
 #include "socket.h"
 
 #define PROMPT "R1(config-if) "
 void   callback(const char*);
+callback_buffer_t socket_callback(caddr_t buf);
 int    execute(const char*, const char**, const char**);
 void   handle_termination(int);
 
@@ -30,17 +31,25 @@ main(int argc, const char **argv)
   /*
    * Initializing server which monitors registered sockets (stdin/unix_socket) activity.
    */
-  srv_init();
+  dsc_init();
   rln_init(PROMPT, callback);
-  sck_init();
+  sck_init(socket_callback);
 
   /* Register word completions */
   ip_completion_init(rln_completion_queue());
 
   /* Forever loop */
-  srv_loop();
+  dsc_loop();
 
   return 0;
+}
+
+callback_buffer_t
+socket_callback(caddr_t buf)
+{
+  log_debug("%s", buf);
+  callback(buf);
+  free(buf);
 }
 
 void

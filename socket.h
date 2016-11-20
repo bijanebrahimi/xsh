@@ -14,6 +14,6 @@ struct msg_hdr {
 };
 
 extern void    sck_cleanup(void);
-extern int     sck_init(void);
+extern int     sck_init(callback_buffer_t callback);
 
 #endif

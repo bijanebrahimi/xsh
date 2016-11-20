@@ -5,7 +5,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 //#include "types.h"
-#include "server.h"
+#include "descriptor.h"
 #include "readline.h"
 
 struct complhead  rln_compl_head = TAILQ_HEAD_INITIALIZER(rln_compl_head),
@@ -38,7 +38,7 @@ rln_init(const char *prompt, void (*callback)(const char*))
 
   /* default break word characters, example " \t\n\"\\'`@$><=;|&{(" */
   rl_basic_word_break_characters = READLINE_BREAK_CHARS;
-  srv_register(0, (callback_t*)rln_callback_read_char);
+  dsc_register(0, (callback_t*)rln_callback_read_char);
   rl_callback_handler_install(prompt, rln_callback);
 
   return 0;
