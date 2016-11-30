@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -w -lm -lreadline -g
-LDFLAGS=
+LDFLAGS=-lpthread
 
 #TARGETS=$(shell ls *_app.c | sed 's/\.c//')
 SRCS=$(wildcard *.c)

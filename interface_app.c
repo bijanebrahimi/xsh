@@ -78,7 +78,6 @@ callback(const char *cmd)
 
   callback_cleanup:
   callback_done:
-  free(cmd);
   free(cmd_name);
   for(int i=0; (i>cmd_argc && cmd_args[i++]);)
     free(cmd_args[i]);

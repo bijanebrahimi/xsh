@@ -5,7 +5,18 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "validators.h"
 
+
+validator_t
+validator_function(const char *name)
+{
+  if (!strcmp(name, "<ip>") || !strcmp(name, "<netmask>"))
+    return validator_ip;
+  else if (strcmp(name, "<network>")==0)
+    return validator_network;
+  return NULL;
+}
 
 int
 validator_ip(const char *ip)

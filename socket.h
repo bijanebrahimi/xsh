@@ -4,6 +4,14 @@
 #define SOCKET_PATH "/tmp/"
 #define SOCKET_FMT (SOCKET_PATH "%d.sock")
 
+TAILQ_HEAD(clientq, client);
+
+typedef struct client {
+  int clnt_fd;
+  pthread_t clnt_thread;
+
+  TAILQ_ENTRY(client) siblings;
+} client_t;
 
 struct msg_hdr {
   u_short msg_len;

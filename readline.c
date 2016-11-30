@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <regex.h>
 #include <sys/queue.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 //#include "types.h"
+#include "validators.h"
 #include "descriptor.h"
 #include "readline.h"
 
@@ -125,41 +128,66 @@ rln_completion_find(const char *text, struct complhead *head)
   return node_return;
 }
 
-struct complnode *
-rln_completion_add(const struct complnode compl_nodes[], struct complhead *head)
+int
+rln_completion_add(const char *cmd, ...)
 {
-  int i;
-  const struct complnode *node;
-  struct complnode *new_node;
+  va_list ap;
+  char *command, *command_ptr, *token, *description;
   struct complhead *head_ptr;
+  regex_t var_regex, opt_regex;
+  size_t match_group_max=1;
+  struct complnode *node;
+  regmatch_t match_group[match_group_max+1];
 
-  head_ptr = head;
-  for (i=0; ; i++) {
-    node = (const struct complnode *)&compl_nodes[i];
-    if (*node->command==NULL)
-      break;
+  head_ptr = &rln_compl_head;
+  if (regcomp(&var_regex, "^<([a-z]+)>", REG_ICASE|REG_EXTENDED) ||
+      regcomp(&opt_regex, "^\\[([a-z]+)\\]", REG_ICASE|REG_EXTENDED))
+    return 1;
 
-    if ((new_node = rln_completion_find_cmd(node->command, head_ptr))!=NULL) {
-      head_ptr = &new_node->head;
+  command = strdup(cmd);
+  command_ptr = command;
+  va_start(ap, cmd);
+  while ((token=strsep(&command, " "))!=NULL) {
+    if (*token=='\0')
+      continue;
+
+    description = va_arg(ap, caddr_t);
+    if ((node = rln_completion_find_cmd(token, head_ptr))!=NULL) {
+      /* TODO: override if necessary */
+      head_ptr = &node->head;
       continue;
     }
 
-    /* new complnode */
-    new_node = malloc(sizeof(struct complnode));
-    TAILQ_INIT(&new_node->head);
-    snprintf(new_node->command, 32, node->command);
-    snprintf(new_node->hint, 16, node->hint);
-    snprintf(new_node->description, 64, node->description);
-    new_node->type = node->type;
-    new_node->optional = node->optional;
-    new_node->generator = node->generator;
-    new_node->validator = node->validator;
-    TAILQ_INSERT_TAIL(head_ptr, new_node, next);
+    node = malloc(sizeof(struct complnode));
+    if (!node)
+      return 1;
+    memset(node, '\0', sizeof node);
+    TAILQ_INIT(&node->head);
+    node->type = COMPLTYPE_STATIC;
+    node->generator = NULL;
+    node->validator = NULL;
+    sprintf(node->command, token);
+    sprintf(node->description, description);
+    if (!regexec(&var_regex, token, match_group_max, match_group, 0)) {
+      snprintf(node->hint, (int)match_group->rm_eo+1, token+(int)match_group->rm_so);
+      node->type = COMPLTYPE_VARIABLE;
+      node->validator = validator_function(node->hint);
+    } else if (!regexec(&opt_regex, token, match_group_max, match_group, 0)) {
+      snprintf(node->hint, strlen(token)-1, token+1);
+      sprintf(node->command, node->hint);
+      node->optional = 1;
+    } else {
+      sprintf(node->hint, node->command);
+    }
 
-    head_ptr = &new_node->head;
+    TAILQ_INSERT_TAIL(head_ptr, node, next);
+    head_ptr = &node->head;
   }
-  return new_node;
-}
+
+  free(command_ptr);
+  va_end(ap);
+  return 0;
+};
 
 int
 rln_completion_help(int _unused, int __unused)

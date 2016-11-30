@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-TAILQ_HEAD(descriptor_queue, descriptor);
+TAILQ_HEAD(descriptorq, descriptor);
 
 typedef struct descriptor {
   int dsc_no;

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -15,12 +16,16 @@
 
 int sck_fd;
 callback_buffer_t sck_callback;
+struct descriptorq sck_head = TAILQ_HEAD_INITIALIZER(sck_head);
 
-void sck_callback_internal(int);
+void sck_connect(int);
+void sck_parse(void *);
 
 int
 sck_init(callback_buffer_t callback)
 {
+  TAILQ_INIT(&sck_head);
+
   if (!callback)
     return -1;
   sck_callback = callback;
@@ -47,22 +52,33 @@ sck_init(callback_buffer_t callback)
     return 2;
   }
 
-  dsc_register(sck_fd, (callback_t*)&sck_callback_internal);
+  dsc_register(sck_fd, (callback_t*)&sck_connect);
 
   return 0;
 }
 
 void
-sck_callback_internal(int sck_fd)
+sck_connect(int sck_fd)
 {
   int sock_client;
-  char *buf, *buf_ptr, *buf_tmp;
-  size_t buf_total_sz=8, buf_ptr_sz=0, buf_free_sz=0, buf_sz=0;
+  client_t client;
 
   if ((sock_client=accept(sck_fd, NULL, NULL)) == -1) {
     log_error("failed to accept (%d): %s", sck_fd, strerror(errno));
     return;
   }
+
+  /* TODO: add to sck_head queue */
+  client.clnt_fd = sock_client;
+  pthread_create(&client.clnt_thread, NULL, sck_parse, (void*)&client);
+}
+
+void
+sck_parse(void *arg)
+{
+  char *buf, *buf_ptr, *buf_tmp;
+  size_t buf_total_sz=8, buf_ptr_sz=0, buf_free_sz=0, buf_sz=0;
+  client_t *client = (client_t*)arg;
 
   /* TODO: should communicate using a defined command struct header. */
   buf = malloc(buf_total_sz);
@@ -87,7 +103,7 @@ sck_callback_internal(int sck_fd)
       buf_free_sz = buf + buf_total_sz - buf_ptr - 1;
     }
 
-    buf_ptr_sz = read(sock_client, buf_ptr, buf_free_sz);
+    buf_ptr_sz = read(client->clnt_fd, buf_ptr, buf_free_sz);
     /* FIXME: check for busy/slow device */
     if (buf_ptr_sz==0)
       break;
@@ -102,7 +118,7 @@ sck_callback_internal(int sck_fd)
   buf[buf_sz] = '\0';
   sck_callback((caddr_t*)buf);
   sck_callback_read_failed:
-  close(sock_client);
+  close(client->clnt_fd);
   return;
 }
 

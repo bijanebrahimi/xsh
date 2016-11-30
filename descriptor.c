@@ -5,7 +5,7 @@
 #include "types.h"
 #include "descriptor.h"
 
-struct descriptor_queue head = TAILQ_HEAD_INITIALIZER(head);
+struct descriptorq head = TAILQ_HEAD_INITIALIZER(head);
 int dsc_append(descriptor_t*);
 int dsc_remove(descriptor_t*);
 
