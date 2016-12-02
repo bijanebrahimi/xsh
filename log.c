@@ -10,7 +10,7 @@ struct{
 } log_labels[] = {
   {LOG_INFO,   "INFO: "},
   {LOG_DEBUG,  "DEBUG: "},
-  {LOG_DEBUG,  "WARNING: "},
+  {LOG_WARN,   "WARNING: "},
   {LOG_ERR,    "ERROR: "}
 };
 
