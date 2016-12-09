@@ -6,9 +6,18 @@
 int
 ip_completion_init(struct complhead *compl_head)
 {
+  rln_completion("[no] ip address [<ip> <netmask> [secondary]]",
+                 "Undo command",
+                 "IP Manipulating command",
+                 "IP address command",
+                 "A.B.C.D",
+                 "A.B.C.D",
+                 "Secondary IP address");
+
+  /*
   rln_completion_add("ip address <ip> <netmask> [secondary]",
                      "IP manipulating command",
-                     "IP 0"0,00
+                     "IPv4 address command",
                      "IPv4 address",
                      "IPv4 netmask address",
                      "IPv4 alias");
@@ -19,7 +28,7 @@ ip_completion_init(struct complhead *compl_head)
                      "IPv4 network number",
                      "IPv4 alias");
   rln_completion_add("no ip address",
-                     "Undo command",
+                     " ",
                      "Undo IP manipulating command",
                      "Remove current IP address");
   rln_completion_add("no ip address <ip> <netmask> [secondary]",
@@ -36,5 +45,6 @@ ip_completion_init(struct complhead *compl_head)
                      NULL,
                      "IPv4 network number",
                      "IPv4 alias");
+  */
   return 0;
 }

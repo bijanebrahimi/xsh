@@ -72,32 +72,6 @@ rln_completion_queue(void)
 }
 
 struct complnode *
-rln_completion_find_cmd(const char *text, struct complhead *head)
-{
-  struct complnode *node, *node_return=NULL;
-
-  if (!text || !(*text) || TAILQ_EMPTY(head))
-    return NULL;
-
-  node = TAILQ_FIRST(head);
-  TAILQ_FOREACH(node, head, next) {
-    if (!strncasecmp(text, node->command, strlen(text))) {
-      if (!node_return)
-        node_return = node;
-      else
-        return NULL;
-    }
-  }
-  return node_return;
-}
-
-struct complnode *
-rln_completion_find_command(const char *text)
-{
-  return rln_completion_find_cmd(text, &rln_compl_head);
-}
-
-struct complnode *
 rln_completion_find(const char *text, struct complhead *head)
 {
   struct complnode *node, *node_return=NULL;
@@ -106,88 +80,109 @@ rln_completion_find(const char *text, struct complhead *head)
 
   node = TAILQ_FIRST(head);
   TAILQ_FOREACH(node, head, next) {
-    switch (node->type) {
-    case COMPLTYPE_STATIC:
-      if (!strncasecmp(text, node->command, strlen(text))) {
-        if (!node_return)
-          node_return = node;
-        else
-          return NULL;
-      }
-      break;
-    case COMPLTYPE_VARIABLE:
+    if (node->flags&COMMAND_VARIABLE) {
       if (node->validator && node->validator(text)) {
         if (!node_return)
           node_return = node;
         else
           return NULL;
       }
-      break;
+    } else if (!strncasecmp(text, node->command, strlen(text))) {
+        if (!node_return)
+          node_return = node;
+        else
+          return NULL;
     }
   }
   return node_return;
 }
 
+struct complnode*
+rln_complnode(const char *command, const char *description, char flags)
+{
+  struct complnode *node;
+
+  node = malloc(sizeof(struct complnode));
+  memset(node, '\0', sizeof(struct complnode));
+  sprintf(node->command, command);
+  sprintf(node->description, description);
+  node->flags = flags;
+  if (node->flags&COMMAND_VARIABLE) {
+    node->validator = validator_function(command);
+    sprintf(node->hint, "<%s>", command);
+  } else
+    sprintf(node->hint, command);
+
+  return node;
+}
+
 int
-rln_completion_add(const char *cmd, ...)
+rln_completion(const char *syntax, ...)
 {
   va_list ap;
-  char *command, *command_ptr, *token, *description;
-  struct complhead *head_ptr;
-  regex_t var_regex, opt_regex;
-  size_t match_group_max=1;
+  char *syntax_ptr, command[64], *description;
+  size_t command_sz, head_stack_sz, head_stack_empty_sz;
+  regex_t regex;
+  regmatch_t regex_match[1];
+  struct complhead *head, *head_stack[20];
   struct complnode *node;
-  regmatch_t match_group[match_group_max+1];
+  int head_stack_empty, command_optional_counter, command_variable_counter, flags;
 
-  head_ptr = &rln_compl_head;
-  if (regcomp(&var_regex, "^<([a-z]+)>", REG_ICASE|REG_EXTENDED) ||
-      regcomp(&opt_regex, "^\\[([a-z]+)\\]", REG_ICASE|REG_EXTENDED))
+
+  if (regcomp(&regex, "(\\[|\\]|>|<|[a-z]+|$)", REG_ICASE|REG_EXTENDED))
     return 1;
 
-  command = strdup(cmd);
-  command_ptr = command;
-  va_start(ap, cmd);
-  while ((token=strsep(&command, " "))!=NULL) {
-    if (*token=='\0')
-      continue;
+  va_start(ap, syntax);
+  head_stack_empty = command_optional_counter = command_variable_counter = 0;
+  head_stack_sz = head_stack_empty_sz = 0;
 
-    description = va_arg(ap, caddr_t);
-    if ((node = rln_completion_find_cmd(token, head_ptr))!=NULL) {
-      /* TODO: override if necessary */
-      head_ptr = &node->head;
-      continue;
+  head = &rln_compl_head;
+  syntax_ptr = syntax;
+  while ((syntax+strlen(syntax)>syntax_ptr) && (!regexec(&regex, syntax_ptr, 1, regex_match, REG_NOTBOL))) {
+    command_sz = regex_match[0].rm_eo - regex_match[0].rm_so+1;
+    snprintf(command, command_sz, syntax_ptr+regex_match[0].rm_so);
+    switch (command[0]) {
+    case '[':
+      command_optional_counter += 1;
+      head_stack[head_stack_sz++] = head;
+      break;
+    case ']':
+      head_stack_empty = 1;
+      head_stack_empty_sz += 1;
+      break;
+    case '<':
+      command_variable_counter += 1;
+      break;
+    case '>':
+      break;
+    case '\0':
+      /* End of syntax */
+      break;
+    default:
+      if (command_variable_counter) {
+        command_variable_counter -= 1;
+        flags |= COMMAND_VARIABLE;
+      }
+      if (command_optional_counter) {
+        command_optional_counter -= 1;
+        flags |= COMMAND_OPTIONAL;
+      }
+      description = va_arg(ap, char *);
+      node = rln_complnode(command, description, flags);
+      TAILQ_INSERT_HEAD(head, node, next);
+      head = &(node->head);
+      if (head_stack_empty) {
+        for (int i=0; i<head_stack_empty_sz; i++, head_stack_sz--)
+          TAILQ_INSERT_TAIL(head_stack[head_stack_sz-1], node, next);
+        head_stack_empty = 0;
+      }
     }
 
-    node = malloc(sizeof(struct complnode));
-    if (!node)
-      return 1;
-    memset(node, '\0', sizeof node);
-    TAILQ_INIT(&node->head);
-    node->type = COMPLTYPE_STATIC;
-    node->generator = NULL;
-    node->validator = NULL;
-    sprintf(node->command, token);
-    sprintf(node->description, description);
-    if (!regexec(&var_regex, token, match_group_max, match_group, 0)) {
-      snprintf(node->hint, (int)match_group->rm_eo+1, token+(int)match_group->rm_so);
-      node->type = COMPLTYPE_VARIABLE;
-      node->validator = validator_function(node->hint);
-    } else if (!regexec(&opt_regex, token, match_group_max, match_group, 0)) {
-      snprintf(node->hint, strlen(token)-1, token+1);
-      sprintf(node->command, node->hint);
-      node->optional = 1;
-    } else {
-      sprintf(node->hint, node->command);
-    }
-
-    TAILQ_INSERT_TAIL(head_ptr, node, next);
-    head_ptr = &node->head;
+    syntax_ptr += regex_match[0].rm_eo;
   }
 
-  free(command_ptr);
   va_end(ap);
-  return 0;
-};
+}
 
 int
 rln_completion_help(int _unused, int __unused)
@@ -253,15 +248,12 @@ rln_command_prepare(const char *cmd, char **cmd_name, char ***cmd_argv, int *cmd
       continue;
 
     if ((node = rln_completion_find(token, head))!=NULL) {
-      switch (node->type) {
-      case COMPLTYPE_STATIC:
+      if (node->flags|COMMAND_VARIABLE) {
         args[(*cmd_argc)++] = strdup(node->command);
         if (*cmd_name==NULL)
           *cmd_name = args[0];
-        break;
-      case COMPLTYPE_VARIABLE:
+      } else {
         args[(*cmd_argc)++] = strdup(token);
-        break;
       }
     } else {
       args[(*cmd_argc)++] = strdup(token);
@@ -330,18 +322,14 @@ completion_entry(const char *text, int state)
   }
 
   while (node) {
-    switch (node->type) {
-    case COMPLTYPE_STATIC:
+    if (node->flags|COMMAND_VARIABLE) {
       if (strncasecmp(text, node->command, strlen(text))==0) {
         buff = strdup(node->command);
         node = TAILQ_NEXT(node, next);
         return buff;
       }
-      break;
-    case COMPLTYPE_VARIABLE:
+    } else {
       /* TODO: add support */
-    default:
-      break;
     }
 
     node = TAILQ_NEXT(node, next);

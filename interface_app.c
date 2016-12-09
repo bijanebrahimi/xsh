@@ -69,10 +69,12 @@ callback(const char *cmd)
   }
 
   /* Avoid running command which completion doesn't know about */
+  /*
   if (!rln_completion_find_command(cmd_name)) {
     printf("%% Command Not Found.\n");
     goto callback_cleanup;
   }
+  */
 
   int status = execute(cmd_name, cmd_args, envs);
 

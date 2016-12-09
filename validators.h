@@ -1,7 +1,8 @@
 #ifndef _VALIDATORS_H_
 #define _VALIDATORS_H_
 
-typedef int (*validator_t)(const char*);
+typedef int   (*validator_t)(const char*);
+typedef char* (*generator_t)(const char*, int);
 
 extern validator_t    validator_function(const char *name);
 extern int            validator_ip(const char*);
